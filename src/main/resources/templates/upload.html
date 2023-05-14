@@ -1,0 +1,146 @@
+<html lang="ch" xmlns:th="https://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>upload</title>
+    <link th:href="@{/webuploader/webuploader.css}" rel="stylesheet" type="text/css"/>
+    <script th:src="@{/jquery.min.js}"></script>
+    <script th:src="@{/webuploader/webuploader.js}"></script>
+</head>
+<body>
+<div id="btns">
+    <div id="picker">选择文件</div>
+    <div id="ctlBtn">开始上传</div>
+</div>
+<div id="flist" class="uploader-list">
+    <!--        <div class="item">-->
+    <!--            <h4 class="info">yukkuy</h4>-->
+    <!--            <div class="msg" id="id1">-->
+    <!--                <div class="state">等待上传...</div>-->
+    <!--                <div class="remove">删除</div>-->
+    <!--            </div>-->
+    <!--        </div>-->
+</div>
+</body>
+<script th:inline="javascript">
+    const uploader = WebUploader.create({
+        swf: '../static/webuploader/Uploader.swf', //swf文件路径
+        server: '/upload',
+        pick: '#picker',  //内部根据当前运行创建
+        // multiple: true,     //选择多个
+        chunked: true,      //开启分片
+        chunkSize: 1024 * 1024,
+        threads: 5,        //并发数
+        // timeout: 60 * 60 * 1000,
+        compress: false
+        // method: 'POST',
+        // fileSizeLimit: 1024 * 1024 * 1024 * 10, //单个文件大小限制
+        // fileSingleSizeLimit: 1048576,  //总文件大小 1024 * 1024
+        // fileVal: 'upload'
+    });
+    let count = 0;
+    let on = 0;
+    const $ctlBtn = $('#ctlBtn');
+    $ctlBtn.on('click', function () {
+        if (on === 0 && count !== 0) {
+            uploader.upload();
+            on = count;
+            count = 0;
+            console.log(this);
+            $ctlBtn.text('正在上传中,稍等...')
+            $('.remove').remove();
+        }
+    });
+    $('#flist').on('click', '.remove', function () {
+        const parent = $(this).parent().parent();
+        const id = parent.attr('id');
+        uploader.removeFile(id, true);
+        parent.remove();
+        count--;
+    });
+    // uploader.on("beforeFileQueued", function (file) {
+    //     console.log(file);
+    // });
+    uploader.on('fileQueued', function (file) {
+        const html = '<div id="' + file.id + '" class="item">' +
+            '<h4 class="info">' + file.name + '</h4>' +
+            '<div class="msg"> ' +
+            '<div class="state" ">等待上传...</div>' +
+            '<div class="remove">删除</div>' +
+            '</div>' +
+            '</div>';
+        $('#flist').append(html);
+        count++;
+    });
+    uploader.on('uploadProgress', function (file, percentage) {
+        $('#' + file.id).find('div.state').text('上传中（' + parseInt(percentage * 100) + '%）');
+    });
+    uploader.on('uploadSuccess', function (file) {
+        $('#' + file.id).find('div.state').text('已上传');
+    });
+    uploader.on('uploadError', function (file) {
+        $('#' + file.id).find('div.state').text('上传出错');
+    });
+    uploader.on('uploadComplete', function () {
+        on--;
+        if (on === 0) {
+            $ctlBtn.text('开始上传');
+        }
+    })
+</script>
+<style>
+    #picker {
+        width: 94px;
+        margin-right: 5px;
+    }
+
+    #ctlBtn {
+        position: relative;
+        display: inline-block;
+        cursor: pointer;
+        background: #EFEFEF;
+        padding: 10px 15px;
+        color: #2E2E2E;
+        text-align: center;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    #ctlBtn:hover {
+        background: #DDDDDD;
+    }
+
+    #btns {
+        display: flex;
+        display: -webkit-inline-flex;
+    }
+
+    .item {
+        border-bottom: 1px solid #a6a6a6
+    }
+
+    .state {
+        text-align: center;
+        padding: 5px;
+    }
+
+    .remove {
+        margin-left: 30px;
+        cursor: pointer;
+        background: #ff5252;
+        padding: 5px;
+        color: #ffffff;
+        border-radius: 3px;
+    }
+
+    .remove:hover {
+        background: #ff0000;
+    }
+
+    .msg {
+        display: flex;
+        display: -webkit-inline-flex;
+    }
+
+
+</style>
+</html>

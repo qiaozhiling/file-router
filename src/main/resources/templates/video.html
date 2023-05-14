@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ch">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+<!--    <script th:src="@{jquery.min.js}"></script>-->
+    <link th:href="@{/dplayer/DPlayer.min.css}" rel="stylesheet"/>
+    <script th:src="@{/dplayer/DPlayer.min.js}"></script>
+</head>
+<body>
+<div id="dplayer"></div>
+<script th:inline="javascript">
+    let filePath = [[${filePath}]];
+    filePath=filePath.replaceAll('[','%5B').replaceAll(']','%5D');
+    console.log(filePath)
+    const dp = new DPlayer({
+        container: document.getElementById('dplayer'),
+        video: {
+            url: filePath,
+            pic: '/leim.jpg',
+        }
+    });
+
+   /* dp.on('ended', function () {
+        console.log('player ended');
+    });*/
+    /*const $player = $("#dplayer");
+    var videoStatus = dp;//document.querySelector("video");
+    $player.on("touchstart", function (e) {
+        e.preventDefault();
+        startX = e.originalEvent.changedTouches[0].pageX,
+            startY = e.originalEvent.changedTouches[0].pageY;
+    });
+    $player.on("touchmove", function (e) {
+        e.preventDefault();
+        moveEndX = e.originalEvent.changedTouches[0].pageX,
+            moveEndY = e.originalEvent.changedTouches[0].pageY,
+            X = moveEndX - startX,
+            Y = moveEndY - startY;
+
+        if (Math.abs(X) > Math.abs(Y) && X > 0) {
+            videoStatus.currentTime += 10;
+        } else if (Math.abs(X) > Math.abs(Y) && X < 0) {
+            videoStatus.currentTime -= 10;
+        } else if (Math.abs(Y) > Math.abs(X) && Y > 0) {
+            videoStatus.volume -= 0.1;
+        } else if (Math.abs(Y) > Math.abs(X) && Y < 0) {
+            videoStatus.volume += 0.1;
+        }
+    });*/
+
+
+</script>
+<style>
+    #dplayer {
+        width: 90%;
+        max-height: 620px;
+        margin: 0 auto;
+    }
+</style>
+</body>
+</html>

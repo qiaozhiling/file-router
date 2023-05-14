@@ -1,0 +1,17 @@
+file:
+  basePath: D:/Downloads
+  uploadPath: ${file.basePath}/upload
+  tempPath: ${file.uploadPath}/temp
+spring:
+  thymeleaf:
+    cache: false
+  mvc:
+    hiddenmethod:
+      filter:
+        enabled: true
+server:
+  port: 8081
+
+#logging:
+#  level:
+#    com.example.videoplayer.controller: debug

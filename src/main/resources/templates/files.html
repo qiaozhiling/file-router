@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ch">
+<head>
+    <meta charset="UTF-8">
+    <title>files</title>
+</head>
+<body>
+<h2 th:if="${#lists.isEmpty(files)}">empty</h2>
+<tr th:each="f:${files}">
+    <p>
+        <a th:if="${f.matches('.*\.(png|jpeg|jpg|PNG|JPEG|JPG|mp4|avi|wmv|mp3)$')}"
+           th:href="@{/v1{name}(name=${f})}" style="margin-right: 5px">
+            <button type="button">观看1</button>
+        </a>
+        <a th:if="${f.matches('.*\.(mkv)$')}"
+           th:href="@{/v2{name}(name=${f})}" style="margin-right: 5px">
+            <button type="button">观看2</button>
+        </a>
+        <a href="files.html" th:href="@{/f{name}(name=${f})}" th:text="${f}">view</a>
+    </p>
+</tr>
+</body>
+</html>

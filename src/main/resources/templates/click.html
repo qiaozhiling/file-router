@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ch">
+<head>
+    <meta charset="UTF-8">
+    <title>ClickBoard</title>
+</head>
+<body>
+<button id="copy">复制文本</button>
+<input id="input" th:value="${content}">
+<script>
+    const button = document.querySelector('#copy');
+    const input = document.querySelector('#input');
+    button.addEventListener('click', () => {
+        input.select();
+        document.execCommand('copy');
+        alert("复制成功");
+    })
+</script>
+<style>
+    #copy {
+        position: relative;
+        display: inline-block;
+        cursor: pointer;
+        background: #0075ff;
+        padding: 10px 15px;
+        color: #ffffff;
+        text-align: center;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+</style>
+</body>
+</html>
