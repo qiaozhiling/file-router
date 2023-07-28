@@ -1,6 +1,6 @@
-package com.example.videoplayer.service;
+package com.example.filerouter.service;
 
-import com.example.videoplayer.handler.NSRRH;
+import com.example.filerouter.handler.NSRRH;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;

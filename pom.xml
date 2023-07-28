@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example</groupId>
-    <artifactId>videoplayer</artifactId>
+    <artifactId>file-router</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>videoplayer</name>
-    <description>videoplayer</description>
+    <name>file-router</name>
+    <description>file-router</description>
     <properties>
         <java.version>11</java.version>
     </properties>

@@ -1,4 +1,4 @@
-package com.example.videoplayer.handler;
+package com.example.filerouter.handler;
 
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;

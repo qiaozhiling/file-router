@@ -1,16 +1,15 @@
-package com.example.videoplayer;
+package com.example.filerouter;
 
-import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 
 import java.net.SocketException;
 
 @SpringBootApplication
-public class VideoplayerApplication {
+public class FileRouterApplication {
     public static void main(String[] args) throws SocketException {
-//        SpringApplication.run(VideoplayerApplication.class, args);
-        SpringApplicationBuilder builder = new SpringApplicationBuilder(VideoplayerApplication.class);
+//        SpringApplication.run(FileRouterApplication.class, args);
+        SpringApplicationBuilder builder = new SpringApplicationBuilder(FileRouterApplication.class);
         builder.headless(false).run(args);
     }
 }

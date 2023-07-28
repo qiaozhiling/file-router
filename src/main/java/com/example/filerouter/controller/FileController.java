@@ -1,7 +1,7 @@
-package com.example.videoplayer.controller;
+package com.example.filerouter.controller;
 
-import com.example.videoplayer.service.DownService;
-import com.example.videoplayer.service.UpService;
+import com.example.filerouter.service.DownService;
+import com.example.filerouter.service.UpService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
