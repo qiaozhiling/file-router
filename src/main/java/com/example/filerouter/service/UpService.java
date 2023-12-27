@@ -15,10 +15,14 @@ public class UpService extends RootService {
 
     private final ExecutorService pool = Executors.newFixedThreadPool(15);
 
-    public void test() {
+    //    public TreeMap<String, UploadingFile> uploadingFileMap = new TreeMap<>();
+//    private short countDown = -1;
+
+    public void infoTest() {
         logger.info("test");
     }
 
+    @Deprecated
     public void upload(Integer chunks, Integer chunk, String name, MultipartFile file) {
         try {
             File target = new File(uploadPath + "/" + name);
@@ -26,14 +30,14 @@ public class UpService extends RootService {
             if (chunk == null) {
                 file.transferTo(target);
             } else {
-                File temp = new File(getTPath(chunk, chunks, name));
+                File temp = new File(getTempFilePath(chunk, chunks, name));
                 checkDir(temp);
                 file.transferTo(temp);
                 pool.submit(() -> {
-                    File front = new File(getTPath(chunk - 1, chunks, name));
-                    File flagFront = new File(getFPath(chunk - 1, chunks, name));
-                    File next = new File(getTPath(chunk + 1, chunks, name));
-                    File flag = new File(getFPath(chunk, chunks, name));
+                    File front = new File(getTempFilePath(chunk - 1, chunks, name));
+                    File flagFront = new File(getFlagFilePath(chunk - 1, chunks, name));
+                    File next = new File(getTempFilePath(chunk + 1, chunks, name));
+                    File flag = new File(getFlagFilePath(chunk, chunks, name));
                     try {
                         if (chunk == 0) {
                             merge(temp, target, false);
@@ -75,52 +79,31 @@ public class UpService extends RootService {
 
     public void upload2(Integer chunks, Integer chunk, String name, MultipartFile file) {
         try {
-            File target = new File(uploadPath + "/" + name);
-            checkDir(target);
-            if (chunk == null) {
+            if (chunk == null) { // only one clip
+                File target = new File(uploadPath + "/" + name);
+                checkDir(target);
                 file.transferTo(target);
                 logger.info(name + " check: ok " + chunks);
-            } else {
+            } else { // more clips
                 logger.debug("chunk: " + chunk);
-                File temp = new File(getTPath(chunk, chunks, name));
-                checkDir(temp);
-                file.transferTo(temp);
-                if (chunk == 0) {
+                File tempFile = new File(getTempFilePath(chunk, chunks, name));
+                checkDir(tempFile);
+                file.transferTo(tempFile);
+                if (chunk == 0) { // first clip
                     logger.info(name + " check: start " + chunks);
+                    //todo
+//                    pool.submit(() -> {
+//                        if (countDown == 1) {
+//                            countDown--;
+//                        } else if (countDown == 0) {
+//
+//                        }
+//
+//                    });
                 }
-                if (chunk == chunks - 1) {
+                if (chunk == chunks - 1) { // last clip
                     logger.info(name + " check: start merge");
-                    pool.submit(() -> {
-                        try {
-                            for (int i = 0; i < chunks; i++) {
-                                File tmp = new File(getTPath(i, chunks, name));
-                                File flg = new File(getFPath(i, chunks, name));
-                                boolean fail = true;
-                                for (int j = 0; j < 10; j++) {
-                                    if (tmp.exists() & tmp.renameTo(flg)) {
-                                        merge(flg, target, i != 0);
-                                        fail = false;
-                                        break;
-                                    } else {
-                                        Thread.sleep(1000L);
-                                    }
-                                }
-                                if (fail) {
-                                    throw new RuntimeException(" check: fail " + i + "/" + chunks);
-                                }
-                            }
-                            logger.info(name + " check: ok " + chunks);
-                            temp.getParentFile().delete();
-                        } catch (IOException | InterruptedException e) {
-                            e.printStackTrace();
-                            for (File f : temp.getParentFile().listFiles()) {
-                                f.delete();
-                            }
-                            temp.getParentFile().delete();
-                            target.delete();
-                            logger.error(name + "check: fail on " + e.getMessage());
-                        }
-                    });
+                    pool.submit(new MergeThread(chunks, name));
                 }
             }
         } catch (IOException e) {
@@ -136,5 +119,51 @@ public class UpService extends RootService {
         fileInputStream.close();
         fileOutputStream.close();
         from.delete();
+    }
+
+    private class MergeThread implements Runnable {
+
+        private final int chunks;
+        private final String fileName;
+        private final File targetFile;
+        private final File tempDir;
+
+        public MergeThread(int chunks, String fileName) {
+            this.chunks = chunks;
+            this.fileName = fileName;
+            this.targetFile = new File(uploadPath + "/" + fileName);
+            this.tempDir = new File(getTempDirPath(fileName));
+        }
+
+        @Override
+        public void run() {
+            try {
+                for (int i = 0; i < chunks; i++) {
+                    File tmp = new File(getTempFilePath(i, chunks, fileName));
+                    File flg = new File(getFlagFilePath(i, chunks, fileName));
+                    boolean fail = true;
+                    for (int j = 0; j < 10; j++) {
+                        if (tmp.exists() & tmp.renameTo(flg)) {
+                            merge(flg, targetFile, i != 0);
+                            fail = false;
+                            break;
+                        } else {
+                            Thread.sleep(1000L);
+                        }
+                    }
+                    if (fail) throw new RuntimeException(" check: fail " + i + "/" + chunks);
+                }
+                logger.info(fileName + " check: ok " + chunks);
+                tempDir.delete();
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+                for (File f : tempDir.listFiles()) {
+                    f.delete();
+                }
+                tempDir.delete();
+                targetFile.delete();
+                logger.error(fileName + "check: fail on " + e.getMessage());
+            }
+        }
     }
 }

@@ -18,10 +18,7 @@ import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.Collator;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Locale;
-import java.util.Objects;
+import java.util.*;
 
 @Service
 public class DownService extends RootService {
@@ -31,8 +28,8 @@ public class DownService extends RootService {
 
     public String getFile(HttpServletResponse response, HttpServletRequest request, Model model) {
         try {
-            String relate_path = request.getServletPath().replaceFirst("/f", "");
-            String path = basePath + relate_path;
+            String requestPath = request.getServletPath().replaceFirst("/f", "");
+            String path = basePath + requestPath;
             File f = new File(path);
             if (!f.exists()) {
                 return "404";
@@ -43,7 +40,7 @@ public class DownService extends RootService {
                 Arrays.sort(fs, Comparator.comparing(file -> !file.isDirectory()));
                 String[] ns = new String[fs.length];
                 for (int i = 0; i < Objects.requireNonNull(fs).length; i++) {
-                    ns[i] = relate_path + "/" + fs[i].getName();
+                    ns[i] = requestPath + "/" + fs[i].getName();
                 }
                 model.addAttribute("files", ns);
                 model.addAttribute("size", ns.length);
@@ -90,6 +87,7 @@ public class DownService extends RootService {
         return request.getServletPath().replaceFirst("v2", "v1");
 //                .replaceAll("\\[", "%5B").replaceAll("]", "%5D")
     }
+
     public String getClipContent() {
         String ret = "";
         Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();

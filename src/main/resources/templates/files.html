@@ -12,7 +12,7 @@
            th:href="@{/v1{name}(name=${f})}" style="margin-right: 5px">
             <button type="button">观看1</button>
         </a>
-        <a th:if="${f.matches('.*\.(mkv)$')}"
+        <a th:if="${f.matches('.*\.(mkv|rmvb)$')}"
            th:href="@{/v2{name}(name=${f})}" style="margin-right: 5px">
             <button type="button">观看2</button>
         </a>

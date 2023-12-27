@@ -5,11 +5,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
 
-public class RootService {
+public abstract class RootService {
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Value("${file.basePath}")
@@ -27,11 +24,15 @@ public class RootService {
         }
     }
 
-    protected String getTPath(Integer chunk, Integer chunks, String name) {
+    protected String getTempDirPath(String name) {
+        return tempPath + "/" + name;
+    }
+
+    protected String getTempFilePath(Integer chunk, Integer chunks, String name) {
         return tempPath + "/" + name + "/" + chunk + "-" + chunks + "-" + name + ".tmp";
     }
 
-    protected String getFPath(Integer chunk, Integer chunks, String name) {
+    protected String getFlagFilePath(Integer chunk, Integer chunks, String name) {
         return tempPath + "/" + name + "/" + chunk + "-" + chunks + "-" + name + ".flag.tmp";
     }
 
