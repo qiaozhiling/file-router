@@ -21,21 +21,15 @@ public class FileController {
     @Autowired
     private DownService downService;
 
+    @GetMapping("u")
+    public String uploadPage() {
+        return "upload";
+    }
+
     @PostMapping("/upload")
     public void upload(Integer chunks, Integer chunk, String name, MultipartFile file) {
 //        upService.upload(chunks, chunk, name, file);
         upService.upload2(chunks, chunk, name, file);
-    }
-
-    @PostMapping("/uptext")
-    @ResponseBody
-    public void uptext(String cont) {
-        upService.uptext(cont);
-    }
-
-    @GetMapping("u")
-    public String uploadPage() {
-        return "upload";
     }
 
     @GetMapping("/f/**")
@@ -54,19 +48,6 @@ public class FileController {
         String path = downService.gv2(request);
         model.addAttribute("filePath", path);
         return "video";
-    }
-
-    @GetMapping("/c")
-    public String click(Model model) {
-        String[] ret = downService.getClipContent();
-        model.addAttribute("type", ret[0]);
-        model.addAttribute("content", ret[1]);
-        return "click";
-    }
-
-    @GetMapping("/cbpn")
-    public void tpic(HttpServletResponse response) {
-        downService.getClickBoardImg(response);
     }
 
     @GetMapping("/")

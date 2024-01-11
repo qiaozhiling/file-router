@@ -15,13 +15,6 @@ public class UpService extends RootService {
 
     private final ExecutorService pool = Executors.newFixedThreadPool(15);
 
-    //    public TreeMap<String, UploadingFile> uploadingFileMap = new TreeMap<>();
-//    private short countDown = -1;
-
-    public void infoTest() {
-        logger.info("test");
-    }
-
     @Deprecated
     public void upload(Integer chunks, Integer chunk, String name, MultipartFile file) {
         try {
@@ -111,10 +104,6 @@ public class UpService extends RootService {
         }
     }
 
-    public void uptext(String cont) {
-        logger.info("upload text : " + cont);
-    }
-
     private void merge(File from, File to, boolean append) throws IOException {
         FileInputStream fileInputStream = new FileInputStream(from);
         FileOutputStream fileOutputStream = new FileOutputStream(to, append);
@@ -144,7 +133,7 @@ public class UpService extends RootService {
             try {
                 for (int i = 0; i < chunks; i++) {
                     File tmp = new File(getTempFilePath(i, chunks, fileName));
-                    File flg = new File(getFlagFilePath(i, chunks, fileName));
+                    File flg = new File(getFlagFilePath(i, chunks, fileName)); // not necessary
                     boolean fail = true;
                     for (int j = 0; j < 10; j++) {
                         if (tmp.exists() & tmp.renameTo(flg)) {

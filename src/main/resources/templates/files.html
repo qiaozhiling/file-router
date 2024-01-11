@@ -6,8 +6,10 @@
 </head>
 <body>
 <h2 th:if="${#lists.isEmpty(files)}">empty</h2>
-<tr th:each="f:${files}">
+<tr th:each="f,fStat:${files}">
     <p>
+        <img th:if="${types[fStat.index]}" src="/picture/directory.png" style="height: 1em;">
+        <!--        <img th:if="${!types[fStat.index]}" src="/picture/file.png" style="height: 1em;">-->
         <a th:if="${f.matches('.*\.(png|jpeg|jpg|PNG|JPEG|JPG|mp4|avi|wmv|mp3)$')}"
            th:href="@{/v1{name}(name=${f})}" style="margin-right: 5px">
             <button type="button">观看1</button>
