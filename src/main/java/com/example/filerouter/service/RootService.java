@@ -3,6 +3,7 @@ package com.example.filerouter.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 
 import java.io.File;
 
@@ -17,6 +18,9 @@ public abstract class RootService {
 
     @Value("${file.tempPath}")
     protected String tempPath;
+
+    @Value("${file.clickBoardPicName}")
+    protected String clickBoardPicName;
 
     protected void checkDir(File f) {
         if (!f.getParentFile().exists()) {

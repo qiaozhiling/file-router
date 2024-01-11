@@ -3,21 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <title>ClickBoard</title>
+    <script th:src="@{/jquery.min.js}"></script>
 </head>
 <body>
-<button id="copy">复制文本</button>
-<input id="input" th:value="${content}">
+<div>
+    <input id="textup" name="cont">
+    <button id="submit" onclick="submitText()">submit</button>
+    <!--    <button id="paste">paste</button>-->
+</div>
+
+<div th:if="${type}=='text'" style="margin-top: 1em">
+    <input id="textdown" th:value="${content}">
+    <button id="copy" onclick="copy()">copy</button>
+</div>
+<div style="margin-top: 1em">
+    <img th:if="${type}=='image'" th:src="${content}" alt="" style="max-width:100%; overflow:hidden; ">
+</div>
 <script>
-    const button = document.querySelector('#copy');
-    const input = document.querySelector('#input');
-    button.addEventListener('click', () => {
-        input.select();
-        document.execCommand('copy');
-        alert("复制成功");
-    })
+    function submitText() {
+        const textUp = document.querySelector('#textup')
+        if (textUp.value === '') {
+            alert('empty content')
+        } else {
+            $.ajax({
+                url: 'uptext',
+                type: 'POST',
+                data: {cont: textUp.value},
+                dataType: 'json'
+            })
+        }
+    }
+
+    function copy() {
+        const textDown = document.querySelector('#textdown')
+        textDown.select()
+        document.execCommand('copy')
+        alert("copy success")
+    }
+
+    // todo auto paste button
+    // const btnPaste = document.querySelector('#paste')
+    // btnPaste.addEventListener('click', () => {
+    //     textUp.focus()
+    //     document.execCommand('paste')
+    //     console.log('paste')
+    // })
 </script>
 <style>
-    #copy {
+    button {
         position: relative;
         display: inline-block;
         cursor: pointer;
@@ -26,7 +59,7 @@
         color: #ffffff;
         text-align: center;
         border-radius: 3px;
-        overflow: hidden;
+        overflow: hidden
     }
 </style>
 </body>

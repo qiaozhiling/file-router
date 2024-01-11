@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
 import org.springframework.util.FileCopyUtils;
 
+import javax.imageio.ImageIO;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
@@ -14,6 +15,7 @@ import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -26,9 +28,8 @@ public class DownService extends RootService {
     @Autowired
     private NSRRH nsrrh;
 
-    public String getFile(HttpServletResponse response, HttpServletRequest request, Model model) {
+    public String getFile(HttpServletResponse response, String requestPath, Model model, boolean delete) {
         try {
-            String requestPath = request.getServletPath().replaceFirst("/f", "");
             String path = basePath + requestPath;
             File f = new File(path);
             if (!f.exists()) {
@@ -46,19 +47,10 @@ public class DownService extends RootService {
                 model.addAttribute("size", ns.length);
                 return "files";
             } else {
-                ServletOutputStream op = response.getOutputStream();
-                response.reset();
-                response.setCharacterEncoding("utf-8");
-                response.setHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(f.getName(), StandardCharsets.UTF_8));
-                response.setHeader("Content-Length", "" + f.length());
-                FileInputStream fis = new FileInputStream(f);
-                BufferedInputStream bis = new BufferedInputStream(fis);
-                BufferedOutputStream bos = new BufferedOutputStream(op);
-                FileCopyUtils.copy(bis, bos);
-                bis.close();
-                bos.close();
-                op.close();
-                fis.close();
+                flushFile(response, f);
+                if (delete) {
+                    f.delete();
+                }
                 return null;
             }
         } catch (IOException e) {
@@ -88,21 +80,55 @@ public class DownService extends RootService {
 //                .replaceAll("\\[", "%5B").replaceAll("]", "%5D")
     }
 
-    public String getClipContent() {
-        String ret = "";
+    public String[] getClipContent() {
+        String type = "";
+        String cont = "";
         Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-        // 获取剪切板中的内容
         Transferable clipTf = clipboard.getContents(null);
-        if (clipTf != null) {
-            // 检查内容是否是文本类型
-            if (clipTf.isDataFlavorSupported(DataFlavor.stringFlavor)) {
-                try {
-                    ret = (String) clipTf.getTransferData(DataFlavor.stringFlavor);
-                } catch (Exception e) {
-                    e.printStackTrace();
+        try {
+            if (clipTf != null) {
+                if (clipTf.isDataFlavorSupported(DataFlavor.stringFlavor)) {// text content
+                    type = "text";
+                    cont = (String) clipTf.getTransferData(DataFlavor.stringFlavor);
+                } else if (clipTf.isDataFlavorSupported(DataFlavor.imageFlavor)) {
+                    type = "image";
+                    BufferedImage image = (BufferedImage) clipTf.getTransferData(DataFlavor.imageFlavor);
+                    File file = new File(tempPath + "/" + clickBoardPicName);
+                    checkDir(file);
+                    ImageIO.write(image, "png", file);
+                    cont = "/cbpn"; // click board image route
                 }
             }
+        } catch (Exception e) {
+            type = "";
+            e.printStackTrace();
         }
-        return ret;
+        return new String[]{type, cont};
+    }
+
+    public void getClickBoardImg(HttpServletResponse response) {
+        File f = new File(tempPath + "/" + clickBoardPicName);
+        try {
+            flushFile(response, f);
+            f.delete();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void flushFile(HttpServletResponse response, File f) throws IOException {
+        ServletOutputStream op = response.getOutputStream();
+        response.reset();
+        response.setCharacterEncoding("utf-8");
+        response.setHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(f.getName(), StandardCharsets.UTF_8));
+        response.setHeader("Content-Length", "" + f.length());
+        FileInputStream fis = new FileInputStream(f);
+        BufferedInputStream bis = new BufferedInputStream(fis);
+        BufferedOutputStream bos = new BufferedOutputStream(op);
+        FileCopyUtils.copy(bis, bos);
+        bis.close();
+        bos.close();
+        op.close();
+        fis.close();
     }
 }

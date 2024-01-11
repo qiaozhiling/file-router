@@ -111,6 +111,10 @@ public class UpService extends RootService {
         }
     }
 
+    public void uptext(String cont) {
+        logger.info("upload text : " + cont);
+    }
+
     private void merge(File from, File to, boolean append) throws IOException {
         FileInputStream fileInputStream = new FileInputStream(from);
         FileOutputStream fileOutputStream = new FileOutputStream(to, append);

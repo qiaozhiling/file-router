@@ -2,6 +2,7 @@ file:
   basePath: D:/Downloads
   uploadPath: ${file.basePath}/upload
   tempPath: ${file.uploadPath}/temp
+  clickBoardPicName: cbpn
 spring:
   thymeleaf:
     cache: false

@@ -3,6 +3,7 @@ package com.example.filerouter.controller;
 import com.example.filerouter.service.DownService;
 import com.example.filerouter.service.UpService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -20,11 +21,16 @@ public class FileController {
     @Autowired
     private DownService downService;
 
-    //String id,  String type, String lastModifiedDate, int size,
     @PostMapping("/upload")
     public void upload(Integer chunks, Integer chunk, String name, MultipartFile file) {
 //        upService.upload(chunks, chunk, name, file);
         upService.upload2(chunks, chunk, name, file);
+    }
+
+    @PostMapping("/uptext")
+    @ResponseBody
+    public void uptext(String cont) {
+        upService.uptext(cont);
     }
 
     @GetMapping("u")
@@ -34,7 +40,8 @@ public class FileController {
 
     @GetMapping("/f/**")
     public String filePage(HttpServletResponse response, HttpServletRequest request, Model model) {
-        return downService.getFile(response, request, model);
+        String requestPath = request.getServletPath().replaceFirst("/f", "");
+        return downService.getFile(response, requestPath, model, false);
     }
 
     @GetMapping("/v1/**")
@@ -51,9 +58,15 @@ public class FileController {
 
     @GetMapping("/c")
     public String click(Model model) {
-        String content = downService.getClipContent();
-        model.addAttribute("content", content);
+        String[] ret = downService.getClipContent();
+        model.addAttribute("type", ret[0]);
+        model.addAttribute("content", ret[1]);
         return "click";
+    }
+
+    @GetMapping("/cbpn")
+    public void tpic(HttpServletResponse response) {
+        downService.getClickBoardImg(response);
     }
 
     @GetMapping("/")
