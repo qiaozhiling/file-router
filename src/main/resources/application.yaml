@@ -15,4 +15,5 @@ server:
 
 #logging:
 #  level:
-#    com.example.videoplayer.controller: debug
+#    com.example.filerouter.controller: debug
+#    com.example.filerouter.service.UpService: debug

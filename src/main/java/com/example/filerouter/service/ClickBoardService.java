@@ -1,5 +1,6 @@
 package com.example.filerouter.service;
 
+import com.example.filerouter.utils.FileUtil;
 import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
@@ -10,6 +11,7 @@ import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.image.BufferedImage;
 import java.io.File;
+
 
 @Service
 public class ClickBoardService extends RootService {
@@ -27,8 +29,8 @@ public class ClickBoardService extends RootService {
                 } else if (clipTf.isDataFlavorSupported(DataFlavor.imageFlavor)) {
                     type = "image";
                     BufferedImage image = (BufferedImage) clipTf.getTransferData(DataFlavor.imageFlavor);
-                    File file = new File(tempPath + "/" + clickBoardPicName);
-                    checkDir(file);
+                    File file = new File(FileUtil.tempPath + "/" +FileUtil.clickBoardPicName);
+                    FileUtil.checkDir(file);
                     ImageIO.write(image, "png", file);
                     cont = "/cbpn"; // click board image route
                 }
@@ -41,9 +43,9 @@ public class ClickBoardService extends RootService {
     }
 
     public void getClickBoardPic(HttpServletResponse response) {
-        File f = new File(tempPath + "/" + clickBoardPicName);
+        File f = new File(FileUtil.tempPath + "/" + FileUtil.clickBoardPicName);
         try {
-            flushFile(response, f);
+            FileUtil.flushFile(response, f);
             f.delete();
         } catch (Exception e) {
             e.printStackTrace();

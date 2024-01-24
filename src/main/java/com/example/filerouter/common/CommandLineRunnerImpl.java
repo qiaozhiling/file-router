@@ -1,4 +1,4 @@
-package com.example.filerouter;
+package com.example.filerouter.common;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,12 +22,12 @@ public class CommandLineRunnerImpl implements CommandLineRunner {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public static String getLocalIp() throws SocketException {
-        Enumeration allNetInterfaces = NetworkInterface.getNetworkInterfaces();
+        Enumeration<NetworkInterface> allNetInterfaces = NetworkInterface.getNetworkInterfaces();
         while (allNetInterfaces.hasMoreElements()) {
-            NetworkInterface netInterface = (NetworkInterface) allNetInterfaces.nextElement();
-            Enumeration addresses = netInterface.getInetAddresses();
+            NetworkInterface netInterface = allNetInterfaces.nextElement();
+            Enumeration<InetAddress> addresses = netInterface.getInetAddresses();
             while (addresses.hasMoreElements()) {
-                InetAddress ip = (InetAddress) addresses.nextElement();
+                InetAddress ip = addresses.nextElement();
                 if (ip != null && ip.isSiteLocalAddress() && ip instanceof Inet4Address) {
                     String ipAddress = ip.getHostAddress();
                     if ("192.168.122.1".equals(ipAddress)) {

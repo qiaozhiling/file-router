@@ -1,26 +1,22 @@
 package com.example.filerouter.service;
 
 import com.example.filerouter.handler.NSRRH;
+import com.example.filerouter.utils.FileUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
-import org.springframework.util.FileCopyUtils;
 
-import javax.imageio.ImageIO;
 import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.awt.*;
-import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.Transferable;
-import java.awt.image.BufferedImage;
-import java.io.*;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import java.io.File;
+import java.io.IOException;
 import java.text.Collator;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Locale;
+import java.util.Objects;
+
 
 @Service
 public class DownService extends RootService {
@@ -30,7 +26,7 @@ public class DownService extends RootService {
 
     public String getFile(HttpServletResponse response, String requestPath, Model model, boolean delete) {
         try {
-            String path = basePath + requestPath;
+            String path = FileUtil.basePath + requestPath;
             File f = new File(path);
             if (!f.exists()) {
                 return "404";
@@ -49,7 +45,7 @@ public class DownService extends RootService {
                 model.addAttribute("types", fileTypes);
                 return "files";
             } else {
-                flushFile(response, f);
+                FileUtil.flushFile(response, f);
                 if (delete) {
                     f.delete();
                 }
@@ -63,7 +59,7 @@ public class DownService extends RootService {
 
     public String getVideo(HttpServletResponse response, HttpServletRequest request) {
         try {
-            String path = basePath + request.getServletPath().replaceFirst("/v1", "");
+            String path = FileUtil.basePath + request.getServletPath().replaceFirst("/v1", "");
             File f = new File(path);
             if (f.exists() & !f.isDirectory()) {
                 request.setAttribute(NSRRH.ATTR_FILE, path);

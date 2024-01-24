@@ -28,8 +28,7 @@ public class FileController {
 
     @PostMapping("/upload")
     public void upload(Integer chunks, Integer chunk, String name, MultipartFile file) {
-//        upService.upload(chunks, chunk, name, file);
-        upService.upload2(chunks, chunk, name, file);
+        upService.upload(chunks, chunk, name, file);
     }
 
     @GetMapping("/f/**")
