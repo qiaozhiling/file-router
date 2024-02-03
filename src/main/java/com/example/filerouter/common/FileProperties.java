@@ -8,11 +8,8 @@ import org.springframework.context.annotation.Configuration;
 public class FileProperties {
 
     private String basePath;
-
-    private String uploadPath;
-
-    private String tempPath;
-
+    private String uploadDir;
+    private String tempDir;
     private String clickBoardPicName;
 
     public String getBasePath() {
@@ -23,20 +20,20 @@ public class FileProperties {
         this.basePath = basePath;
     }
 
-    public String getUploadPath() {
-        return uploadPath;
+    public String getUploadDir() {
+        return uploadDir;
     }
 
-    public void setUploadPath(String uploadPath) {
-        this.uploadPath = uploadPath;
+    public void setUploadDir(String uploadDir) {
+        this.uploadDir = uploadDir;
     }
 
-    public String getTempPath() {
-        return tempPath;
+    public String getTempDir() {
+        return tempDir;
     }
 
-    public void setTempPath(String tempPath) {
-        this.tempPath = tempPath;
+    public void setTempDir(String tempDir) {
+        this.tempDir = tempDir;
     }
 
     public String getClickBoardPicName() {

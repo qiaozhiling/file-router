@@ -25,6 +25,7 @@ public class DownService extends RootService {
     private NSRRH nsrrh;
 
     public String getFile(HttpServletResponse response, String requestPath, Model model, boolean delete) {
+
         try {
             String path = FileUtil.basePath + requestPath;
             File f = new File(path);
@@ -57,7 +58,7 @@ public class DownService extends RootService {
         }
     }
 
-    public String getVideo(HttpServletResponse response, HttpServletRequest request) {
+    public String getPreView(HttpServletResponse response, HttpServletRequest request) {
         try {
             String path = FileUtil.basePath + request.getServletPath().replaceFirst("/v1", "");
             File f = new File(path);
@@ -67,8 +68,10 @@ public class DownService extends RootService {
                 return null;
             }
             return "404";
-        } catch (IOException | ServletException e) {
+        } catch (ServletException e) {
             e.printStackTrace();
+            return null;
+        } catch (IOException e) {
             return null;
         }
     }

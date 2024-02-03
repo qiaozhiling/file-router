@@ -1,5 +1,6 @@
 package com.example.filerouter.common;
 
+import com.example.filerouter.utils.FileUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -17,6 +18,8 @@ public class CommandLineRunnerImpl implements CommandLineRunner {
     public void run(String... args) throws SocketException {
         System.out.println("application start...");
         logger.info("serve start on: " + getLocalIp());
+        String userHome = System.getProperty("user.home");
+        logger.info("base path : " + FileUtil.basePath + "\n alter base path in " + userHome + "\\.fbprc charset utf-8");
     }
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());

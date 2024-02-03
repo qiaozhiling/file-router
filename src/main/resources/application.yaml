@@ -1,7 +1,7 @@
 file:
   basePath: D:/Downloads
-  uploadPath: ${file.basePath}/upload
-  tempPath: ${file.uploadPath}/temp
+  uploadDir: /uploads
+  tempDir: /temp
   clickBoardPicName: cbpn
 spring:
   thymeleaf:

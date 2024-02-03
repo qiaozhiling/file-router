@@ -2,15 +2,18 @@ package com.example.filerouter.controller;
 
 import com.example.filerouter.service.DownService;
 import com.example.filerouter.service.UpService;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.FileInputStream;
+import java.io.IOException;
 
 @Controller
 public class FileController {
@@ -38,12 +41,12 @@ public class FileController {
     }
 
     @GetMapping("/v1/**")
-    public String getVideo1(HttpServletResponse response, HttpServletRequest request) {
-        return downService.getVideo(response, request);
+    public String getPreView1(HttpServletResponse response, HttpServletRequest request) {
+        return downService.getPreView(response, request);
     }
 
     @GetMapping("/v2/**")
-    public String getVideo2(HttpServletRequest request, Model model) {
+    public String getPreView2(HttpServletRequest request, Model model) {
         String path = downService.gv2(request);
         model.addAttribute("filePath", path);
         return "video";
