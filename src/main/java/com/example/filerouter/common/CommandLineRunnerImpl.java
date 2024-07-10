@@ -18,8 +18,7 @@ public class CommandLineRunnerImpl implements CommandLineRunner {
     public void run(String... args) throws SocketException {
         System.out.println("application start...");
         logger.info("serve start on: " + getLocalIp());
-        String userHome = System.getProperty("user.home");
-        logger.info("base path : " + FileUtil.basePath + "\n alter base path in " + userHome + "\\.fbprc charset utf-8");
+        logger.info("base path : " + FileUtil.basePath + ", use \"--file.basePath=path\" to alter base path");
     }
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -33,7 +32,7 @@ public class CommandLineRunnerImpl implements CommandLineRunner {
                 InetAddress ip = addresses.nextElement();
                 if (ip != null && ip.isSiteLocalAddress() && ip instanceof Inet4Address) {
                     String ipAddress = ip.getHostAddress();
-                    if ("192.168.122.1".equals(ipAddress)) {
+                    if (ipAddress.endsWith("1")) {
                         continue;
                     }
                     return ipAddress;

@@ -2,6 +2,7 @@ package com.example.filerouter.service;
 
 import com.example.filerouter.handler.NSRRH;
 import com.example.filerouter.utils.FileUtil;
+import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
@@ -52,6 +53,8 @@ public class DownService extends RootService {
                 }
                 return null;
             }
+        } catch (ClientAbortException e) {
+            return null;
         } catch (IOException e) {
             e.printStackTrace();
             return null;
@@ -68,10 +71,10 @@ public class DownService extends RootService {
                 return null;
             }
             return "404";
-        } catch (ServletException e) {
-            e.printStackTrace();
+        } catch (ClientAbortException e) {
             return null;
-        } catch (IOException e) {
+        } catch (ServletException | IOException e) {
+            e.printStackTrace();
             return null;
         }
     }

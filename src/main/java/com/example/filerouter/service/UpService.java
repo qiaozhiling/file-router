@@ -15,7 +15,7 @@ import java.util.concurrent.Executors;
 @Service
 public class UpService extends RootService {
 
-    private final ExecutorService pool = Executors.newFixedThreadPool(15);
+    private final ExecutorService pool = Executors.newFixedThreadPool(20);
 
     private final HashMap<String, AccompanyThread> uploadingFileMap = new HashMap<>();
 

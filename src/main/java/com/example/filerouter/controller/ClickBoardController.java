@@ -1,8 +1,6 @@
 package com.example.filerouter.controller;
 
 import com.example.filerouter.service.ClickBoardService;
-import com.example.filerouter.service.DownService;
-import com.example.filerouter.service.UpService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -31,8 +29,8 @@ public class ClickBoardController {
         clickBoardService.uptext(cont);
     }
 
-    @GetMapping("/cbpn")
-    public void tpic(HttpServletResponse response) {
+    @GetMapping("/cbpn") // click board picture name
+    public void tpic(HttpServletResponse response) { // temp picture
         clickBoardService.getClickBoardPic(response);
     }
 }

@@ -58,7 +58,7 @@ public class AccompanyThread implements Runnable {
     }
 
     public synchronized void feed() {
-        if (counter < 10) {
+        if (counter < 60) {
             counter++;
         }
     }
@@ -68,7 +68,8 @@ public class AccompanyThread implements Runnable {
             for (int i = 0; i < chunks; i++) {
                 File tmp = new File(FileUtil.getTempFilePath(i, chunks, fileName));
                 boolean fail = true;
-                for (int j = 0; j < 10; j++) { // wait 10 seconds for next clip
+                int wait = 10;// wait minutes for next clip
+                for (int j = 0; j < wait * 60; j++) {
                     if (tmp.exists()) {
                         merge(tmp, targetFile, i != 0);
                         fail = false;

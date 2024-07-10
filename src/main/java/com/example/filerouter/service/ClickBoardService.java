@@ -16,12 +16,12 @@ import java.io.File;
 @Service
 public class ClickBoardService extends RootService {
 
-    public String[] getClipContent() {
+    public String[] getClipContent() { // get text or image from click board
         String type = "";
         String cont = "";
-        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-        Transferable clipTf = clipboard.getContents(null);
         try {
+            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+            Transferable clipTf = clipboard.getContents(null);
             if (clipTf != null) {
                 if (clipTf.isDataFlavorSupported(DataFlavor.stringFlavor)) {// text content
                     type = "text";
@@ -29,7 +29,7 @@ public class ClickBoardService extends RootService {
                 } else if (clipTf.isDataFlavorSupported(DataFlavor.imageFlavor)) {
                     type = "image";
                     BufferedImage image = (BufferedImage) clipTf.getTransferData(DataFlavor.imageFlavor);
-                    File file = new File(FileUtil.tempPath + "/" +FileUtil.clickBoardPicName);
+                    File file = new File(FileUtil.tempPath + "/" + FileUtil.clickBoardPicName);
                     FileUtil.checkDir(file);
                     ImageIO.write(image, "png", file);
                     cont = "/cbpn"; // click board image route
