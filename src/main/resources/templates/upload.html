@@ -25,7 +25,7 @@
     const uploader = WebUploader.create({
         swf: '../static/webuploader/Uploader.swf', //swf文件路径
         server: '/upload',
-        pick: '#picker',  //内部根据当前运行创建
+        pick: {id: '#picker', multiple: true},  //内部根据当前运行创建
         // multiple: true,     //选择多个
         chunked: true,      //开启分片
         chunkSize: 1024 * 1024,

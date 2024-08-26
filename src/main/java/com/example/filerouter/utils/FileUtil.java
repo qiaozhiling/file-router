@@ -51,8 +51,12 @@ public class FileUtil {
         ServletOutputStream op = response.getOutputStream();
         response.reset();
         response.setCharacterEncoding("utf-8");
-        response.setHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(f.getName(), StandardCharsets.UTF_8));
         response.setHeader("Content-Length", "" + f.length());
+        if (f.getName().endsWith(".html")) {
+            response.setHeader("content-type", "text/html");
+        } else {
+            response.setHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(f.getName(), StandardCharsets.UTF_8));
+        }
         FileInputStream fis = new FileInputStream(f);
         BufferedInputStream bis = new BufferedInputStream(fis);
         BufferedOutputStream bos = new BufferedOutputStream(op);
