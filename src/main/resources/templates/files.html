@@ -1,25 +1,174 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ch">
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>files</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件列表</title>
+    <style>
+        /* 定义全局色彩与变量 */
+        :root {
+            --bg-color: #f3f4f6;
+            --surface-color: #ffffff;
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --secondary-color: #10b981;
+            --secondary-hover: #059669;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 1rem; /* 针对手机端稍微减小了外边距 */
+            display: flex;
+            justify-content: center;
+        }
+
+        /* 居中卡片容器 */
+        .container {
+            background-color: var(--surface-color);
+            width: 100%;
+            max-width: 800px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 1.5rem; /* 针对手机端稍微减小了内边距 */
+        }
+
+        h2.empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            font-weight: 500;
+            padding: 2rem 0;
+        }
+
+        /* 文件列表布局 */
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .file-item:hover {
+            background-color: #f9fafb;
+            border-color: #d1d5db;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        /* 文件名和图标 */
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-main);
+            font-weight: 500;
+            flex-grow: 1;
+            /* 保证文件名可以被正确截断 */
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            min-width: 0; /* 修复某些浏览器下 flex 子项截断失效的问题 */
+        }
+
+        .file-info img {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+            flex-shrink: 0; /* 防止图标被挤压变形 */
+        }
+
+        /* 核心修复：操作按钮组 */
+        .file-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: 12px;
+            flex-shrink: 0; /* 关键：禁止按钮容器在小屏幕被挤压缩小 */
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        button {
+            border: none;
+            padding: 8px 12px; /* 稍微缩小了一点按钮内边距以适应小屏 */
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            color: white;
+            white-space: nowrap; /* 关键：禁止按钮内的文字换行 */
+        }
+
+        .btn-view1 {
+            background-color: var(--primary-color);
+        }
+        .btn-view1:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-view2 {
+            background-color: var(--secondary-color);
+        }
+        .btn-view2:hover {
+            background-color: var(--secondary-hover);
+        }
+        
+        /* 超小屏幕的额外优化 */
+        @media (max-width: 400px) {
+            .file-item {
+                padding: 10px 12px;
+            }
+            button {
+                padding: 6px 10px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
 </head>
 <body>
-<h2 th:if="${#lists.isEmpty(files)}">empty</h2>
-<tr th:each="f,fStat:${files}">
-    <p>
-        <img th:if="${types[fStat.index]}" src="/picture/directory.png" style="height: 1em;">
-        <!--        <img th:if="${!types[fStat.index]}" src="/picture/file.png" style="height: 1em;">-->
-        <a th:if="${f.toLowerCase().matches('.*\.(png|jpeg|jpg|gif|mp4|mp3|pdf)$')}"
-           th:href="@{/v1{name}(name=${f})}" style="margin-right: 5px">
-            <button type="button">观看1</button>
-        </a>
-        <a th:if="${f.matches('.*\.(mkv|rmvb|avi)$')}"
-           th:href="@{/v2{name}(name=${f})}" style="margin-right: 5px">
-            <button type="button">观看2</button>
-        </a>
-        <a href="files.html" th:href="@{/f{name}(name=${f})}" th:text="${f}">view</a>
-    </p>
-</tr>
+
+<div class="container">
+    <h2 class="empty-state" th:if="${#lists.isEmpty(files)}">📭 暂无文件</h2>
+
+    <div class="file-list" th:unless="${#lists.isEmpty(files)}">
+        <div class="file-item" th:each="f,fStat:${files}">
+            
+            <a class="file-info" th:href="@{/f{name}(name=${f})}">
+                <img th:if="${types[fStat.index]}" src="/picture/directory.png" alt="folder">
+                <img th:if="${!types[fStat.index]}" src="/picture/file.png" alt="file" style="opacity: 0.7;">
+                <span th:text="${f}" style="overflow: hidden; text-overflow: ellipsis;">文件名</span>
+            </a>
+
+            <div class="file-actions">
+                <a th:if="${f.toLowerCase().matches('.*\.(png|jpeg|jpg|gif|mp4|mp3|pdf)$')}"
+                   th:href="@{/v1{name}(name=${f})}">
+                    <button class="btn-view1" type="button">观看 1</button>
+                </a>
+                <a th:if="${f.matches('.*\.(mkv|rmvb|avi)$')}"
+                   th:href="@{/v2{name}(name=${f})}">
+                    <button class="btn-view2" type="button">观看 2</button>
+                </a>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

@@ -1,146 +1,290 @@
-<html lang="ch" xmlns:th="https://www.thymeleaf.org">
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="https://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8"/>
-    <title>upload</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件上传</title>
+    <!-- 保留原本的依赖引入 -->
     <link th:href="@{/webuploader/webuploader.css}" rel="stylesheet" type="text/css"/>
     <script th:src="@{/jquery.min.js}"></script>
     <script th:src="@{/webuploader/webuploader.js}"></script>
+    
+    <style>
+        /* 保持与之前一致的全局色彩与变量 */
+        :root {
+            --bg-color: #f3f4f6;
+            --surface-color: #ffffff;
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --secondary-color: #10b981;
+            --secondary-hover: #059669;
+            --danger-color: #ef4444;
+            --danger-hover: #dc2626;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 1rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* 居中卡片容器 */
+        .container {
+            background-color: var(--surface-color);
+            width: 100%;
+            max-width: 800px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 1.5rem;
+        }
+
+        .page-title {
+            text-align: center;
+            color: var(--text-main);
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        /* 顶部按钮控制区布局 */
+        #btns {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 1.5rem;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap; /* 适配窄屏幕换行 */
+        }
+
+        /* 覆盖 WebUploader 的默认选择文件按钮样式以统一 UI */
+        .webuploader-pick {
+            background-color: var(--primary-color) !important;
+            padding: 10px 20px !important;
+            border-radius: 6px !important;
+            font-size: 0.95rem !important;
+            font-weight: 500 !important;
+            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+            transition: background-color 0.2s ease;
+        }
+
+        .webuploader-pick-hover {
+            background-color: var(--primary-hover) !important;
+        }
+
+        /* 自定义开始上传按钮 */
+        #ctlBtn {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+            transition: background-color 0.2s ease;
+        }
+
+        #ctlBtn:hover {
+            background-color: var(--secondary-hover);
+        }
+
+        /* 文件列表容器 */
+        .uploader-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* 单个文件项（复用之前列表页的卡片样式） */
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: #fafafa;
+            transition: all 0.2s ease;
+        }
+
+        .file-item:hover {
+            background-color: #fff;
+            border-color: #d1d5db;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+        }
+
+        /* 文件名 */
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-main);
+            font-weight: 500;
+            flex-grow: 1;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            min-width: 0; 
+        }
+
+        .file-info .info {
+            margin: 0;
+            font-size: 1rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
+        }
+
+        /* 操作区（状态文字 + 删除按钮） */
+        .msg {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0; 
+        }
+
+        .state {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            min-width: 80px;
+            text-align: right;
+        }
+
+        /* 删除按钮美化 */
+        .remove {
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .remove:hover {
+            background-color: var(--danger-hover);
+        }
+
+        /* 手机端细节优化 */
+        @media (max-width: 480px) {
+            .file-item {
+                padding: 10px 12px;
+            }
+            .state {
+                font-size: 0.75rem;
+                min-width: 60px;
+            }
+            .remove {
+                padding: 5px 10px;
+            }
+        }
+    </style>
 </head>
 <body>
-<div id="btns">
-    <div id="picker">选择文件</div>
-    <div id="ctlBtn">开始上传</div>
+
+<div class="container">
+    <h2 class="page-title">📤 批量上传文件</h2>
+    
+    <!-- 按钮操作区 -->
+    <div id="btns">
+        <div id="picker">选择文件</div>
+        <button id="ctlBtn">开始上传</button>
+    </div>
+    
+    <!-- 文件列表显示区 -->
+    <div id="flist" class="uploader-list"></div>
 </div>
-<div id="flist" class="uploader-list">
-    <!--        <div class="item">-->
-    <!--            <h4 class="info">yukkuy</h4>-->
-    <!--            <div class="msg" id="id1">-->
-    <!--                <div class="state">等待上传...</div>-->
-    <!--                <div class="remove">删除</div>-->
-    <!--            </div>-->
-    <!--        </div>-->
-</div>
-</body>
+
 <script th:inline="javascript">
+    // 保留原有的上传器配置
     const uploader = WebUploader.create({
-        swf: '../static/webuploader/Uploader.swf', //swf文件路径
+        swf: '../static/webuploader/Uploader.swf', 
         server: '/upload',
-        pick: {id: '#picker', multiple: true},  //内部根据当前运行创建
-        // multiple: true,     //选择多个
-        chunked: true,      //开启分片
+        pick: {id: '#picker', multiple: true},  
+        chunked: true,      
         chunkSize: 1024 * 1024,
-        threads: 5,        //并发数
-        // timeout: 60 * 60 * 1000,
+        threads: 5,        
         compress: false
-        // method: 'POST',
-        // fileSizeLimit: 1024 * 1024 * 1024 * 10, //单个文件大小限制
-        // fileSingleSizeLimit: 1048576,  //总文件大小 1024 * 1024
-        // fileVal: 'upload'
     });
+    
     let count = 0;
     let on = 0;
     const $ctlBtn = $('#ctlBtn');
+    
+    // 开始上传逻辑[cite: 2]
     $ctlBtn.on('click', function () {
         if (on === 0 && count !== 0) {
             uploader.upload();
             on = count;
             count = 0;
             console.log(this);
-            $ctlBtn.text('正在上传中,稍等...')
+            $ctlBtn.text('正在上传中...');
+            $ctlBtn.css('background-color', '#9ca3af'); // 上传中置灰按钮
             $('.remove').remove();
         }
     });
+    
+    // 移除队列文件逻辑[cite: 2]
     $('#flist').on('click', '.remove', function () {
-        const parent = $(this).parent().parent();
+        // 因层级结构调整，这里改为 closest 直接查找最外层的 .file-item 更加稳妥
+        const parent = $(this).closest('.file-item');
         const id = parent.attr('id');
         uploader.removeFile(id, true);
         parent.remove();
         count--;
     });
-    // uploader.on("beforeFileQueued", function (file) {
-    //     console.log(file);
-    // });
+
+    // 文件进入队列[cite: 2]
     uploader.on('fileQueued', function (file) {
-        const html = '<div id="' + file.id + '" class="item">' +
-            '<h4 class="info">' + file.name + '</h4>' +
+        // 重构了注入的 HTML，使用了更现代的 CSS 类名进行布局控制
+        const html = '<div id="' + file.id + '" class="file-item">' +
+            '<div class="file-info">' +
+                '📄 <span class="info">' + file.name + '</span>' +
+            '</div>' +
             '<div class="msg"> ' +
-            '<div class="state" ">等待上传...</div>' +
-            '<div class="remove">删除</div>' +
+                '<div class="state">等待上传...</div>' +
+                '<button class="remove">删除</button>' +
             '</div>' +
             '</div>';
         $('#flist').append(html);
         count++;
     });
+    
+    // 更新上传进度[cite: 2]
     uploader.on('uploadProgress', function (file, percentage) {
-        $('#' + file.id).find('div.state').text('上传中（' + parseInt(percentage * 100) + '%）');
+        const percentStr = parseInt(percentage * 100) + '%';
+        $('#' + file.id).find('div.state').text('上传中（' + percentStr + '）').css('color', 'var(--primary-color)');
     });
+    
+    // 上传成功[cite: 2]
     uploader.on('uploadSuccess', function (file) {
-        $('#' + file.id).find('div.state').text('已上传');
+        $('#' + file.id).find('div.state').text('已上传').css('color', 'var(--secondary-color)');
     });
+    
+    // 上传出错[cite: 2]
     uploader.on('uploadError', function (file) {
-        $('#' + file.id).find('div.state').text('上传出错');
+        $('#' + file.id).find('div.state').text('上传出错').css('color', 'var(--danger-color)');
     });
+    
+    // 队列处理完成[cite: 2]
     uploader.on('uploadComplete', function () {
         on--;
         if (on === 0) {
             $ctlBtn.text('开始上传');
+            $ctlBtn.css('background-color', 'var(--secondary-color)'); // 恢复按钮颜色
         }
-    })
+    });
 </script>
-<style>
-    #picker {
-        width: 94px;
-        margin-right: 5px;
-    }
 
-    #ctlBtn {
-        position: relative;
-        display: inline-block;
-        cursor: pointer;
-        background: #EFEFEF;
-        padding: 10px 15px;
-        color: #2E2E2E;
-        text-align: center;
-        border-radius: 3px;
-        overflow: hidden;
-    }
-
-    #ctlBtn:hover {
-        background: #DDDDDD;
-    }
-
-    #btns {
-        display: flex;
-        display: -webkit-inline-flex;
-    }
-
-    .item {
-        border-bottom: 1px solid #a6a6a6
-    }
-
-    .state {
-        text-align: center;
-        padding: 5px;
-    }
-
-    .remove {
-        margin-left: 30px;
-        cursor: pointer;
-        background: #ff5252;
-        padding: 5px;
-        color: #ffffff;
-        border-radius: 3px;
-    }
-
-    .remove:hover {
-        background: #ff0000;
-    }
-
-    .msg {
-        display: flex;
-        display: -webkit-inline-flex;
-    }
-
-
-</style>
+</body>
 </html>
