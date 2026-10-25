@@ -22,10 +22,10 @@ public class SubtitleController {
         catch (IOException e) { throw unavailable(e); }
     }
 
-    @GetMapping(value = "/api/subtitles/track", produces = "text/vtt;charset=UTF-8")
+    @GetMapping(value = {"/api/subtitles/track", "/api/subtitles/track.vtt"}, produces = "text/vtt;charset=UTF-8")
     public ResponseEntity<String> track(@RequestParam("path") String path, @RequestParam("track") long track) {
         try {
-            return ResponseEntity.ok().header("Cache-Control", "no-cache")
+            return ResponseEntity.ok().header("Cache-Control", "no-store")
                     .header("X-Content-Type-Options", "nosniff").body(subtitles.webVtt(path, track));
         } catch (IOException e) { throw unavailable(e); }
     }

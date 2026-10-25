@@ -83,6 +83,10 @@ public class DownService extends RootService {
         try {
             File f = resolveMedia(requestPath);
             if (f != null) {
+                // Keep original video bytes seekable without persisting a browser media cache.
+                if (requestPath.toLowerCase(Locale.ROOT).matches(".*\\.(mp4|mkv|rmvb|avi|webm|m4v|mov)$")) {
+                    response.setHeader("Cache-Control", "no-store");
+                }
                 request.setAttribute(NSRRH.ATTR_FILE, f.getPath());
                 nsrrh.handleRequest(request, response);
                 return null;

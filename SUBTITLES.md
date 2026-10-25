@@ -1,8 +1,8 @@
-# MP4 内封字幕
+# 统一视频播放与字幕
 
-文件列表统一点击 **观看**（`/v1/文件路径`）。视频自动进入播放器，读取字幕并默认开启第一轨，可切换轨道或关闭。图片、音频、PDF 保留浏览器直接预览。
-
-旧 `/v2/文件路径` 自动跳转到 `/v1/文件路径`。播放器通过独立的 `/media/文件路径` 获取原始媒体数据，保留 Range 分段请求和进度拖动。需要给其他播放器提供原始视频 URL 时，请使用 `/media/`。
+文件列表点击 **观看**，所有视频进入 `/v1/文件路径` 的同一个 libmedia AVPlayerUI 1.3.1
+播放器，包括 MP4、MKV、WebM、M4V、MOV、AVI、RMVB。播放、拖动、音轨、字幕、倍速和全屏
+使用同一套控件。旧 `/v2/` 链接继续跳转到 `/v1/`。
 
 ## 启动
 
@@ -11,31 +11,60 @@ mvn package
 java -jar target/file-router-0.0.1-SNAPSHOT.jar
 ```
 
-使用项目的 `application.yaml` 配置，默认端口为 `8081`。也可通过启动参数显式指定：
+默认端口为 **8081**，根目录由 `file.basePath` 配置。文件列表和上传页面保留原有优化 UI。
 
-```powershell
-java -jar target/file-router-0.0.1-SNAPSHOT.jar --server.port=8081
-```
+## 解码与缓存
 
-## 实现
+JAR 只通过 `/media/文件路径` 发送原始文件，支持 HTTP Range。播放器根据实际音视频编码
+及浏览器能力选择解码路径，不按扩展名拆成两个播放器：优先 MSE 原生解码，其次 WebCodecs，
+必要时使用 WASM 软件解码。MSE 兼容的 MKV 也可以使用原生解码，不强制所有 MKV 软件解码。
 
-- 使用 Java 依赖 `org.mp4parser:muxer:1.9.56` 定位和读取 MP4 的 `tx3g` 文本字幕样本，不依赖 FFmpeg，不修改原视频。
-- `GET /api/subtitles?path=...` 返回字幕轨道的 ID、语言与名称，path 是相对 `file.basePath` 的文件路径，带前导 `/`。
-- `GET /api/subtitles/track?path=...&track=...` 返回 UTF-8 WebVTT。查询参数应通过 URLSearchParams 或等效接口编码。
-- 按样本时间、合成时间偏移和编辑列表生成时间轴，保留换行，转义字幕内的 HTML 标记。
-- 浏览器使用原生 `<track>` 绘制字幕，支持 DPlayer 视频全屏。
-- 统一管理视频的全部字幕轨道（包括浏览器识别的内封轨道），默认只显示第一条；切换后只显示选中轨道，关闭时禁用全部字幕，异步加载不会重新启用旧轨道。
-- 最多缓存 8 个视频的转换结果，每个视频最多 4M 字符。缓存位于内存，重启后重新读取，视频大小或修改时间变化后自动失效。
-- 字幕路径经规范化和真实路径检查，只能访问 `file.basePath` 内的文件。
+无后端 FFmpeg 转码、MP4 中间文件或持久视频缓存。视频与字幕响应设置 `Cache-Control: no-store`，
+播放过程只使用内存缓冲。退出页面销毁播放器。没有 Service Worker、Cache API、IndexedDB
+或文件系统媒体存储。播放器脚本、动态模块和 WASM 都在 JAR 内，由本地应用提供。
 
-## 当前范围
+MSE 模式直接使用原生管线拖动。单线程 WASM 模式拖动会重新初始化解码管线，从原始视频目标位置
+重新读取，避免刷新解码器时卡住；会短暂等待，并恢复音量、倍速、音轨和字幕选择。
+软件解码的流畅度取决于设备性能、编码、分辨率和码率，不保证任意编码都支持。
 
-支持 MP4 内封 `tx3g` 文本字幕，已用实际视频的简体和繁体两轨验证。名称按语言和轨道序号显示；文件元数据未区分简繁时，不推测标签。
+## 字幕
 
-不保留原字幕的字体、颜色、特效和精确位置。不支持 ASS、PGS、VobSub、MKV 字幕或独立 SRT/ASS 文件；无兼容字幕时显示提示，读取失败不阻止视频播放。变速字幕编辑暂不支持。
+内封字幕由统一播放器解析和绘制，MP4 tx3g、MKV 字幕等共用播放器的字幕控件。
+只显示当前选择的一轨；点击字幕开关可关闭或开启，在菜单中切换轨道，也可添加本机字幕文件。
+字幕随播放器进入全屏。具体文本、图形字幕与特效支持范围取决于 libmedia 的解码模块。
+已用真实 MP4 的简体、繁体两轨验证读取、播放和切换。
+
+保留原 Java MP4 tx3g 提取接口作为兼容备用。只有播放器未识别任何内封字幕时，MP4 才尝试调用，
+避免字幕列表出现重复轨道。Java 解析结果使用有界内存缓存，不写视频目录或磁盘缓存。
+
+- `GET /api/subtitles?path=...`：字幕 ID、语言、名称。
+- `GET /api/subtitles/track?path=...&track=...`：原有 UTF-8 WebVTT 接口。
+- `GET /api/subtitles/track.vtt?path=...&track=...`：同一 WebVTT 内容，供统一播放器识别格式。
+
+查询参数使用 URLSearchParams 编码。Java 接口仅提取 MP4 tx3g，字体、颜色、位置和特效不保留；
+ASS、PGS、MKV 等由播放器自己的模块处理。字幕失败有提示，视频仍可播放。
+媒体与 Java 字幕接口检查真实路径，只能读取 `file.basePath` 内文件。
+
+## 手机操作
+
+竖屏按视频比例显示，横屏适配屏幕。轻点画面显示或隐藏控制栏，播放时自动隐藏。
+单击等待约 0.3 秒以区分双击；双击左半边快退 2 秒，右半边快进 2 秒，跳转限制在视频时长内。
+长按约 0.45 秒临时以 2 倍速播放，松手或切到后台恢复原倍速；滑动和控件操作不触发倍速。
+点击设置按钮打开，再次点击或点击弹窗右上角 × 关闭。播放器区域关闭浏览器触摸高亮。
 
 ## 验证
 
-`mvn test` 包含字幕时间轴、空白间隔、UTF-16、文本转义、编辑列表、双轨读取、缓存更新、UTF-8 响应和目录越界检查。
+```powershell
+mvn test
+node --test --test-isolation=none src/test/js/video-player.test.cjs src/test/js/mobile-player-controls.test.cjs
+```
 
-`node src/test/js/subtitle-selection.test.cjs` 验证默认只显示一轨、延迟添加轨道、浏览器自动启用轨道、关闭字幕和快速切换后的异步加载。
+后端验证字幕时间轴、编辑列表、文本转义、UTF-16、双轨读取、缓存失效、路径越界、
+WebVTT 新旧地址和 no-store、原始 MKV 字节与 Range。
+前端验证全格式同一入口、特殊文件名、原生 MSE 优先、本地 WASM、内封字幕不重复、
+Java 字幕兼容备用、MSE/WASM 拖动分流、音轨与字幕设置恢复、暂停跳转、错误提示与销毁，以及手机单击、双击跳转、长按倍速、设置弹窗关闭和手势取消。
+
+上游版本、来源、许可证与资源 SHA256 见 `src/main/resources/static/libmedia/NOTICE.md`、
+`COPYING.LGPLv3`、`COPYING.GPLv3`、`manifest.json`。
+上游源码及构建说明：https://github.com/zhaohappy/libmedia/tree/v1.3.1 。
+WASM 解码模块包含 FFmpeg 代码，本应用不再包含或运行 FFmpeg 本地可执行程序。

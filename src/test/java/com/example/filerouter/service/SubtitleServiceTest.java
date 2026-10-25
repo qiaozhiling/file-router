@@ -101,6 +101,11 @@ class SubtitleServiceTest {
                 .andExpect(jsonPath("$[0].vtt").doesNotExist());
         mvc.perform(get("/api/subtitles/track").param("path", "/视频[简&繁].mp4").param("track", "" + id))
                 .andExpect(status().isOk()).andExpect(content().contentType("text/vtt;charset=UTF-8"))
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("中文内容")));
+        mvc.perform(get("/api/subtitles/track.vtt").param("path", "/视频[简&繁].mp4").param("track", "" + id))
+                .andExpect(status().isOk()).andExpect(content().contentType("text/vtt;charset=UTF-8"))
+                .andExpect(header().string("Cache-Control", "no-store"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("中文内容")));
         mvc.perform(get("/api/subtitles").param("path", "/../outside.mp4")).andExpect(status().isForbidden());
         mvc.perform(get("/api/subtitles").param("path", "/missing.mp4")).andExpect(status().isNotFound());

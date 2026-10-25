@@ -31,6 +31,7 @@ class PreviewRoutingTest {
         ReflectionTestUtils.setField(controller, "downService", service);
         mvc = MockMvcBuilders.standaloneSetup(controller).build();
         Files.write(root.resolve("film.MP4"), new byte[]{0,1,2,3,4,5,6,7,8,9});
+        Files.write(root.resolve("film.mkv"), new byte[]{0x1a,0x45,(byte)0xdf,(byte)0xa3,4,5,6,7,8,9});
         Files.write(root.resolve("image.png"), new byte[]{1,2,3});
         Files.write(root.resolve("document.pdf"), new byte[]{4,5,6});
     }
@@ -48,6 +49,16 @@ class PreviewRoutingTest {
         mvc.perform(get("/media/film.MP4").servletPath("/media/film.MP4").header("Range", "bytes=2-5"))
                 .andExpect(status().isPartialContent()).andExpect(header().string("Content-Range", "bytes 2-5/10"))
                 .andExpect(content().bytes(new byte[]{2,3,4,5}));
+    }
+
+    @Test void originalMkvIsSeekableAndCannotBePersistentlyCached() throws Exception {
+        mvc.perform(get("/media/film.mkv").servletPath("/media/film.mkv"))
+                .andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(content().bytes(Files.readAllBytes(root.resolve("film.mkv"))));
+        mvc.perform(get("/media/film.mkv").servletPath("/media/film.mkv").header("Range", "bytes=4-7"))
+                .andExpect(status().isPartialContent()).andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(header().string("Content-Range", "bytes 4-7/10"))
+                .andExpect(content().bytes(new byte[]{4,5,6,7}));
     }
 
     @Test void imagesAndPdfKeepDirectPreview() throws Exception {

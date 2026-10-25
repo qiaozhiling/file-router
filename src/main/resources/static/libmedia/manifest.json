@@ -1,0 +1,247 @@
+{
+  "version": "1.3.1",
+  "playerPackage": "@libmedia/avplayer-ui",
+  "source": "https://github.com/zhaohappy/libmedia/tree/v1.3.1",
+  "files": [
+    {
+      "file": "cheap-polyfill.js",
+      "sha256": "a04524de0c0ca689dc306c84f2fca62f47d2a0b42cd126b2a7bf0d9b5b6fa8f5"
+    },
+    {
+      "file": "COPYING.GPLv3",
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+    },
+    {
+      "file": "COPYING.LGPLv3",
+      "sha256": "ea8af5e789cb2d4e9b10bce3874982ade163b749b6bfbdb32e2df21c4d106de1"
+    },
+    {
+      "file": "decode/aac.wasm",
+      "sha256": "9cbef85899775c7431dfffbd704d30fa185089f1f4280e2ea90be07e40b635c8"
+    },
+    {
+      "file": "decode/ac3.wasm",
+      "sha256": "d2803836e5a9f69266312db639f07dd60f61189a017df3cf7d19aa98d512b754"
+    },
+    {
+      "file": "decode/adpcm.wasm",
+      "sha256": "d42fc675b2f28e05990dfd44649c413a648b0177140f1b7e43427844561a378d"
+    },
+    {
+      "file": "decode/av1.wasm",
+      "sha256": "e790ed307fbf863d521c4d963bdcfacb48e225aaad81338d980ce469b2d3c34f"
+    },
+    {
+      "file": "decode/dca.wasm",
+      "sha256": "2624086c71822ff6a5a229bc216241e36bb7b7bb94c5e0357c9943f7a89aa5d5"
+    },
+    {
+      "file": "decode/eac3.wasm",
+      "sha256": "2329e65263f9aa04cce5ced5e134c53316b67d2682f44325e6f3b5a982219461"
+    },
+    {
+      "file": "decode/flac.wasm",
+      "sha256": "60023457a89eaa041957773d6a4a6c196df17df642a924746faacf535f874dca"
+    },
+    {
+      "file": "decode/h264.wasm",
+      "sha256": "b74abea1d814b89dd66d5072f9e0845db6d6b05102536560ed6141025d602120"
+    },
+    {
+      "file": "decode/hevc.wasm",
+      "sha256": "76b2093b50690444e0ab43bfa9cd4d88d1abf93ac9875ac187304709b0406fa0"
+    },
+    {
+      "file": "decode/mjpeg.wasm",
+      "sha256": "d8c1fb2c994acaef7f699724c095c93b023df92353af59924beeda40483184c8"
+    },
+    {
+      "file": "decode/mp3.wasm",
+      "sha256": "357bc4c581f5381dc5d815c45965312dda9d2b906b823a79643fad8e4e662313"
+    },
+    {
+      "file": "decode/mpeg2video.wasm",
+      "sha256": "cc08d102e889a21dec0fd5a0ddae0bb547d63eb5f3d507b7a978b10cccd3ab93"
+    },
+    {
+      "file": "decode/mpeg4.wasm",
+      "sha256": "ceea47d2251aeb4542900a211abd588605e8556d3cbf51e4a640c05b41f58985"
+    },
+    {
+      "file": "decode/msmpeg4.wasm",
+      "sha256": "66f8dadd2cb6137e55895a8f7345afbe93428ddf459993949cff1ef622c58cbf"
+    },
+    {
+      "file": "decode/opus.wasm",
+      "sha256": "9c0ca5f7d22fe0d2557b6cb075a48dd3c3c1295dd1da0f7ef7dd36f8071d9235"
+    },
+    {
+      "file": "decode/pcm.wasm",
+      "sha256": "ec82fbecf825a34d35b979b727769cb8380bf1e06e61d30bb79a75c517655cc8"
+    },
+    {
+      "file": "decode/ra.wasm",
+      "sha256": "e8954856de48b6388d35d21c37e519e14eff54af2f1f896a6e367f5be325bb8d"
+    },
+    {
+      "file": "decode/theora.wasm",
+      "sha256": "d48daf18977707b6eb2d7f7b38a742a2541976702c388d5c7ae3560f5665d8bf"
+    },
+    {
+      "file": "decode/vorbis.wasm",
+      "sha256": "fe92937f0ac4de980467da04a617e58c6f228d137862767dfdbf8694bd101aff"
+    },
+    {
+      "file": "decode/vp8.wasm",
+      "sha256": "69d84d37dd9291cb2072f33a76e9cf320b67d1fb846ea55194659d17457559e6"
+    },
+    {
+      "file": "decode/vp9.wasm",
+      "sha256": "71ce0ca267d3adf3048352a93e0146a13c32bb7f95a2243f4d11bf6f95942f15"
+    },
+    {
+      "file": "decode/wmv.wasm",
+      "sha256": "5aa9dcec9b97ee33a691cfd5035de86fe1bbe7dbf62acfedf15f112905cfb934"
+    },
+    {
+      "file": "NOTICE.md",
+      "sha256": "09291f4bd94b64ba4f7c83884d81dcf9e9c60cd0326da4714c4113431d26f145"
+    },
+    {
+      "file": "player-bundle/163.avplayer.js",
+      "sha256": "f7a1d72db6389cf3786b4b8fd049ba8b78450174d74395473a664b57b6e365b7"
+    },
+    {
+      "file": "player-bundle/182.avplayer.js",
+      "sha256": "561bd2533d5d16e5463f600d6636e50be95dd9f26cd2d64403efec09a4bd9139"
+    },
+    {
+      "file": "player-bundle/195.avplayer.js",
+      "sha256": "6a62deb28584b8fe94944b13a5a956aa19c2e224f458a3ea2911ba452df69a1b"
+    },
+    {
+      "file": "player-bundle/199.avplayer.js",
+      "sha256": "08175b7fd9aef2804e9f28e2bc7b36788e125ebddd418e9c1d3dc1cdddf8f64b"
+    },
+    {
+      "file": "player-bundle/239.avplayer.js",
+      "sha256": "2d11ea2ebca53d80785051efcb53517cb6b9e4d5dfd8bd56a9acd6af5a235625"
+    },
+    {
+      "file": "player-bundle/248.avplayer.js",
+      "sha256": "e7dd40aae09c03066c5e00e4f56948ca07ab14d7d2e4a5281677184af9f67b36"
+    },
+    {
+      "file": "player-bundle/26.avplayer.js",
+      "sha256": "8ca506b724b277f8baaa75e0720c0d6c1b1b85f016f57e2899917b2cfa6caaed"
+    },
+    {
+      "file": "player-bundle/261.avplayer.js",
+      "sha256": "a22abbdad529b30f57c8d3346ece4216545ee6124a9b2bc24a490baebe905266"
+    },
+    {
+      "file": "player-bundle/266.avplayer.js",
+      "sha256": "b95dc9dca6e7b0d2f03c9b42f37604d6a6961297946d1a6dcdf6d049f9f5d7db"
+    },
+    {
+      "file": "player-bundle/325.avplayer.js",
+      "sha256": "34ba87d29db5a65a85bf5bd8f940e2fc839f4c4915755bdf26b886d29daa95f8"
+    },
+    {
+      "file": "player-bundle/33.avplayer.js",
+      "sha256": "4eed360072b7a9bf196df027ee53b1558155e8d4c38bee7b8960d793fc5767ea"
+    },
+    {
+      "file": "player-bundle/384.avplayer.js",
+      "sha256": "7724724e56070fb62d7ae922d4ab4a9d5cf72259411f92e1ed87588721d16291"
+    },
+    {
+      "file": "player-bundle/43.avplayer.js",
+      "sha256": "1d28ce4b480ec0133bba2e2c311f59b2c91ab10b5702aeb961e1ccdc0993ff46"
+    },
+    {
+      "file": "player-bundle/462.avplayer.js",
+      "sha256": "fdd5fdfb5ccd28fe3143508fa3ea3718a9540e25f444b3e739718eed9f4ad4aa"
+    },
+    {
+      "file": "player-bundle/502.avplayer.js",
+      "sha256": "cc99ac210af6f52db8a7c1c9324b52f44834001f9e66c0d11bd896883723bd15"
+    },
+    {
+      "file": "player-bundle/573.avplayer.js",
+      "sha256": "e51f5114380919e26b2a4b14ea2d1de12b6fa2eeb35d344eeaf99d8ba9424f1e"
+    },
+    {
+      "file": "player-bundle/630.avplayer.js",
+      "sha256": "415df8b918bf9fd2a62e1ffc94bb66e6b97e760fbf7cfcc2126757ab0336971f"
+    },
+    {
+      "file": "player-bundle/641.avplayer.js",
+      "sha256": "90bbc5eb9e71165bf3a2a2c1e9da184947e265c641f6f2100c2324f6b34033b9"
+    },
+    {
+      "file": "player-bundle/747.avplayer.js",
+      "sha256": "ee0d20d0101966fa6fa1c72a6eff5b2c6ae46f594b862b42a5998a856445ed5d"
+    },
+    {
+      "file": "player-bundle/749.avplayer.js",
+      "sha256": "7b482b04b30cae090e90d610e11043419037822a73ff397a159b985017e49f09"
+    },
+    {
+      "file": "player-bundle/790.avplayer.js",
+      "sha256": "7a8a7e78e770479ceb9400778c97b8d87d5d0c582cf57d1219ace14e66659a0f"
+    },
+    {
+      "file": "player-bundle/794.avplayer.js",
+      "sha256": "5006169b27c99d077ec00032bbafaf1138c3cff82d948e588f24c2a329c9b8c9"
+    },
+    {
+      "file": "player-bundle/850.avplayer.js",
+      "sha256": "6bb1452e2a0ff65aa591ce67f4fd0d4c1487115731fb3ee5239f5db11598bbd4"
+    },
+    {
+      "file": "player-bundle/881.avplayer.js",
+      "sha256": "a0fda825c2be1f5c25fd7a659c384bb79437b7040b1a5329fa4328441de54580"
+    },
+    {
+      "file": "player-bundle/931.avplayer.js",
+      "sha256": "3c12314786e74ab5ee7956002a40b5e1541103013e230feddd6771f719d7de38"
+    },
+    {
+      "file": "player-bundle/932.avplayer.js",
+      "sha256": "bb59e5ce50ef6a1cab7b4a4e60f8ea67180ae215d1cc4fbf269972cac05f230f"
+    },
+    {
+      "file": "player-bundle/943.avplayer.js",
+      "sha256": "d54c87ee87e1f1cb74847d306c35aa08cd5161d5bd2241778bf53c02a6a770dd"
+    },
+    {
+      "file": "player-bundle/956.avplayer.js",
+      "sha256": "d59993fab247da694514807e502106372d77d9bb2ddcd02931e689b78a3be4e0"
+    },
+    {
+      "file": "player-bundle/961.avplayer.js",
+      "sha256": "1caa3c3f5fe7b6668ffd67c9abade2cf78f1701b76c653f91c1049286a94604f"
+    },
+    {
+      "file": "player-bundle/97.avplayer.js",
+      "sha256": "ba8dd58b3ea2d6751dc36bcd66dfe31c25dbdc8567accbb382b74c26bf42fb9b"
+    },
+    {
+      "file": "player-bundle/991.avplayer.js",
+      "sha256": "75972214329948e9321f1980ab2a93ec4cd913579a78656e91e6196be8b74de0"
+    },
+    {
+      "file": "player-bundle/avplayer.js",
+      "sha256": "8e964cb4e9aee3de246fdf2b2fcf719bbea3da1bd6346a813b834889cd30fbcd"
+    },
+    {
+      "file": "resample/resample.wasm",
+      "sha256": "7709e04280d6f9487872cbcfbffa747032aaa5e45a72849a1aaceb05259b347d"
+    },
+    {
+      "file": "stretchpitch/stretchpitch.wasm",
+      "sha256": "9397d474f85fbf3d0bc6b5b78bb500d0329a7a2c4ce212c8531cd56514434a7a"
+    }
+  ]
+}
