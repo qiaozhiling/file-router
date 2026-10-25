@@ -1,58 +1,25 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ch">
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <title>ClickBoard</title>
-    <script th:src="@{/jquery.min.js}"></script>
+    <script defer th:src="@{/clipboard.js}"></script>
 </head>
 <body>
 <div>
     <input id="textup" name="cont">
-    <button id="submit" type="button" onclick="submitText()">submit</button>
+    <button id="submit" type="button" th:data-submit-url="@{/uptext}">submit</button>
     <!--    <button id="paste">paste</button>-->
 </div>
 
 <div th:if="${type}=='text'" style="margin-top: 1em">
     <input id="textdown" th:value="${content}">
-    <button id="copy" onclick="copy()">copy</button>
+    <button id="copy" type="button">copy</button>
 </div>
 <div style="margin-top: 1em">
     <img th:if="${type}=='image'" th:src="${content}" alt="" style="max-width:100%; overflow:hidden; ">
 </div>
-<script>
-    function submitText() {
-        const textUp = document.querySelector('#textup')
-        if (textUp.value === '') {
-            alert('empty content')
-        } else {
-            $.ajax({
-                url: 'uptext',
-                type: 'POST',
-                async: false,
-                data: 'cont=' + textUp.value, //{cont: textUp.value},
-                dataType: "text",
-                success: function () {
-                    alert('success')
-                }
-            })
-        }
-    }
 
-    function copy() {
-        const textDown = document.querySelector('#textdown')
-        textDown.select()
-        document.execCommand('copy')
-        alert("copy success")
-    }
-
-    // todo auto paste button
-    // const btnPaste = document.querySelector('#paste')
-    // btnPaste.addEventListener('click', () => {
-    //     textUp.focus()
-    //     document.execCommand('paste')
-    //     console.log('paste')
-    // })
-</script>
 <style>
     button {
         position: relative;

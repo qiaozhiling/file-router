@@ -4,11 +4,8 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>文件上传</title>
-    <!-- 保留原本的依赖引入 -->
-    <link th:href="@{/webuploader/webuploader.css}" rel="stylesheet" type="text/css"/>
-    <script th:src="@{/jquery.min.js}"></script>
-    <script th:src="@{/webuploader/webuploader.js}"></script>
-    
+    <script defer th:src="@{/upload.js}"></script>
+
     <style>
         /* 保持与之前一致的全局色彩与变量 */
         :root {
@@ -63,8 +60,11 @@
             flex-wrap: wrap; /* 适配窄屏幕换行 */
         }
 
-        /* 覆盖 WebUploader 的默认选择文件按钮样式以统一 UI */
-        .webuploader-pick {
+        /* 选择文件按钮 */
+        #picker {
+            border: none;
+            color: white;
+            cursor: pointer;
             background-color: var(--primary-color) !important;
             padding: 10px 20px !important;
             border-radius: 6px !important;
@@ -74,7 +74,7 @@
             transition: background-color 0.2s ease;
         }
 
-        .webuploader-pick-hover {
+        #picker:hover {
             background-color: var(--primary-hover) !important;
         }
 
@@ -132,7 +132,7 @@
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
-            min-width: 0; 
+            min-width: 0;
         }
 
         .file-info .info {
@@ -148,7 +148,7 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            flex-shrink: 0; 
+            flex-shrink: 0;
         }
 
         .state {
@@ -188,103 +188,31 @@
                 padding: 5px 10px;
             }
         }
+        #picker:disabled, #ctlBtn:disabled, .remove:disabled { opacity: 0.55; cursor: not-allowed; }
+        #ctlBtn:disabled { background-color: #9ca3af; }
+        #upload-message { color: var(--text-muted); font-size: 0.875rem; }
+        #upload-message:empty { display: none; }
+        @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div class="container" id="file-upload" th:data-upload-url="@{/upload}">
     <h2 class="page-title">📤 批量上传文件</h2>
-    
+
     <!-- 按钮操作区 -->
     <div id="btns">
-        <div id="picker">选择文件</div>
-        <button id="ctlBtn">开始上传</button>
+        <button id="picker" type="button">选择文件</button>
+        <input id="file-input" type="file" multiple hidden>
+        <button id="ctlBtn" type="button" disabled>开始上传</button>
     </div>
-    
+
     <!-- 文件列表显示区 -->
     <div id="flist" class="uploader-list"></div>
+    <p id="upload-message" role="status" aria-live="polite"></p>
 </div>
 
-<script th:inline="javascript">
-    // 保留原有的上传器配置
-    const uploader = WebUploader.create({
-        swf: '../static/webuploader/Uploader.swf', 
-        server: '/upload',
-        pick: {id: '#picker', multiple: true},  
-        chunked: true,      
-        chunkSize: 1024 * 1024,
-        threads: 5,        
-        compress: false
-    });
-    
-    let count = 0;
-    let on = 0;
-    const $ctlBtn = $('#ctlBtn');
-    
-    // 开始上传逻辑[cite: 2]
-    $ctlBtn.on('click', function () {
-        if (on === 0 && count !== 0) {
-            uploader.upload();
-            on = count;
-            count = 0;
-            console.log(this);
-            $ctlBtn.text('正在上传中...');
-            $ctlBtn.css('background-color', '#9ca3af'); // 上传中置灰按钮
-            $('.remove').remove();
-        }
-    });
-    
-    // 移除队列文件逻辑[cite: 2]
-    $('#flist').on('click', '.remove', function () {
-        // 因层级结构调整，这里改为 closest 直接查找最外层的 .file-item 更加稳妥
-        const parent = $(this).closest('.file-item');
-        const id = parent.attr('id');
-        uploader.removeFile(id, true);
-        parent.remove();
-        count--;
-    });
 
-    // 文件进入队列[cite: 2]
-    uploader.on('fileQueued', function (file) {
-        // 重构了注入的 HTML，使用了更现代的 CSS 类名进行布局控制
-        const html = '<div id="' + file.id + '" class="file-item">' +
-            '<div class="file-info">' +
-                '📄 <span class="info">' + file.name + '</span>' +
-            '</div>' +
-            '<div class="msg"> ' +
-                '<div class="state">等待上传...</div>' +
-                '<button class="remove">删除</button>' +
-            '</div>' +
-            '</div>';
-        $('#flist').append(html);
-        count++;
-    });
-    
-    // 更新上传进度[cite: 2]
-    uploader.on('uploadProgress', function (file, percentage) {
-        const percentStr = parseInt(percentage * 100) + '%';
-        $('#' + file.id).find('div.state').text('上传中（' + percentStr + '）').css('color', 'var(--primary-color)');
-    });
-    
-    // 上传成功[cite: 2]
-    uploader.on('uploadSuccess', function (file) {
-        $('#' + file.id).find('div.state').text('已上传').css('color', 'var(--secondary-color)');
-    });
-    
-    // 上传出错[cite: 2]
-    uploader.on('uploadError', function (file) {
-        $('#' + file.id).find('div.state').text('上传出错').css('color', 'var(--danger-color)');
-    });
-    
-    // 队列处理完成[cite: 2]
-    uploader.on('uploadComplete', function () {
-        on--;
-        if (on === 0) {
-            $ctlBtn.text('开始上传');
-            $ctlBtn.css('background-color', 'var(--secondary-color)'); // 恢复按钮颜色
-        }
-    });
-</script>
 
 </body>
 </html>
