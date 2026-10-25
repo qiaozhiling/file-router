@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>文件列表</title>
+    <title th:text="${directoryName} + ' - 文件列表'">文件列表</title>
+    <script defer th:src="@{/file-browser.js}"></script>
     <style>
         /* 定义全局色彩与变量 */
         :root {
@@ -121,17 +122,83 @@
             .file-item { padding: 10px 12px; }
             button { padding: 6px 10px; font-size: 0.8rem; }
         }
+        .directory-header { margin-bottom: 20px; min-width: 0; }
+        .directory-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .directory-heading h1 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.35rem; margin: 0; }
+        .path-action { display: inline-flex; align-items: center; flex-shrink: 0; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: white; color: var(--primary-color); font-size: 0.875rem; }
+        .path-action:hover { background: #eef2ff; }
+        .breadcrumbs { margin-top: 12px; }
+        .breadcrumbs ol { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 0; list-style: none; padding: 0; margin: 0; min-width: 0; }
+        .breadcrumbs li { display: flex; align-items: center; min-width: 0; max-width: 100%; color: var(--text-muted); font-size: 0.875rem; }
+        .breadcrumbs li + li::before { content: '›'; padding: 0 8px; color: #9ca3af; flex-shrink: 0; }
+        .breadcrumbs a, .breadcrumbs .crumb-name { min-width: 0; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 5px 0; }
+        .breadcrumbs a { color: var(--primary-color); }
+        .breadcrumbs a:hover { text-decoration: underline; }
+        .crumb-current { font-weight: 500; }
+        .breadcrumbs .crumb-toggle { display: none; }
+        #breadcrumb-toggle { background: #eef2ff; color: var(--primary-color); padding: 4px 10px; }
+        .path-details { margin-top: 8px; color: var(--text-muted); font-size: 0.8rem; }
+        .path-details summary { cursor: pointer; width: fit-content; padding: 5px 0; }
+        .path-details-content { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; background: #f9fafb; padding: 12px; border-radius: 6px; margin-top: 4px; }
+        #directory-path { overflow-wrap: anywhere; min-width: 0; flex: 1 1 180px; user-select: text; }
+        #copy-directory-path { background: var(--primary-color); }
+        #path-copy-status { flex-basis: 100%; }
+        #path-copy-status:empty { display: none; }
+        :focus-visible { outline: 2px solid var(--primary-color); outline-offset: 3px; }
+        @media (max-width: 600px) {
+            body { padding: 12px; }
+            .container { padding: 16px; min-width: 0; }
+            .directory-heading h1 { font-size: 1.15rem; }
+            .breadcrumbs a, .breadcrumbs .crumb-name { max-width: 110px; }
+            .breadcrumbs-enhanced:not(.is-expanded) .crumb-middle { display: none; }
+            .breadcrumbs-enhanced .crumb-toggle { display: flex; }
+            .breadcrumbs-enhanced:not(.is-expanded) ol { flex-wrap: nowrap; }
+            .breadcrumbs-enhanced:not(.is-expanded) .crumb-parent, .breadcrumbs-enhanced:not(.is-expanded) .crumb-current { flex: 1; overflow: hidden; }
+            .breadcrumbs .crumb-current { flex-shrink: 1; }
+            .breadcrumbs li + li::before { padding: 0 5px; }
+            .path-action { padding: 8px; }
+        }
     </style>
 </head>
 <body>
 <div class="container">
+    <header class="directory-header">
+        <div class="directory-heading">
+            <h1 th:text="${directoryName}" th:title="${directoryName}">当前目录</h1>
+            <a class="path-action" th:if="${parentPath != null}" th:href="@{/f{path}(path=${parentPath})}">返回上级</a>
+        </div>
+        <nav id="directory-breadcrumbs" class="breadcrumbs" aria-label="目录导航">
+            <ol>
+                <li class="crumb-root">
+                    <a th:if="${parentPath != null}" th:href="@{/f}">首页</a>
+                    <span th:if="${parentPath == null}" class="crumb-name" aria-current="page">首页</span>
+                </li>
+                <li class="crumb-toggle" th:if="${#lists.size(breadcrumbs) > 3}">
+                    <button id="breadcrumb-toggle" type="button" aria-expanded="false" aria-label="展开中间目录">…</button>
+                </li>
+                <li th:each="crumb, stat : ${breadcrumbs}" th:if="${!stat.first}"
+                    th:class="${stat.last ? 'crumb-current' : (stat.index == #lists.size(breadcrumbs) - 2 ? 'crumb-parent' : 'crumb-middle')}">
+                    <a th:unless="${stat.last}" th:href="@{/f{path}(path=${crumb.path})}" th:text="${crumb.name}" th:title="${crumb.name}"></a>
+                    <span th:if="${stat.last}" class="crumb-name" aria-current="page" th:text="${crumb.name}" th:title="${crumb.name}"></span>
+                </li>
+            </ol>
+        </nav>
+        <details class="path-details">
+            <summary>路径详情</summary>
+            <div class="path-details-content">
+                <code id="directory-path" th:text="${currentPath}">/</code>
+                <button id="copy-directory-path" type="button">复制路径</button>
+                <span id="path-copy-status" role="status" aria-live="polite"></span>
+            </div>
+        </details>
+    </header>
     <h2 class="empty-state" th:if="${#lists.isEmpty(files)}">📭 暂无文件</h2>
     <div class="file-list" th:unless="${#lists.isEmpty(files)}">
         <div class="file-item" th:each="f,fStat:${files}">
             <a class="file-info" th:href="@{/f{name}(name=${f})}">
-                <img th:if="${types[fStat.index]}" src="/picture/directory.png" alt="folder">
-                <img th:if="${!types[fStat.index]}" src="/picture/file.png" alt="file" style="opacity: 0.7;">
-                <span th:text="${f}" style="overflow: hidden; text-overflow: ellipsis;">文件名</span>
+                <img th:if="${types[fStat.index]}" th:src="@{/picture/directory.png}" alt="folder">
+                <img th:if="${!types[fStat.index]}" th:src="@{/picture/file.png}" alt="file" style="opacity: 0.7;">
+                <span th:text="${displayNames[fStat.index]}" th:title="${displayNames[fStat.index]}" style="overflow: hidden; text-overflow: ellipsis;">文件名</span>
             </a>
             <div class="file-actions">
                 <a th:if="${!types[fStat.index] and f.toLowerCase().matches('.*\.(png|jpeg|jpg|gif|mp4|mp3|pdf|mkv|rmvb|avi|webm|m4v|mov)$')}"

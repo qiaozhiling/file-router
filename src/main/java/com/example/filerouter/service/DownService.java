@@ -16,6 +16,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.Collator;
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.Objects;
@@ -35,17 +38,39 @@ public class DownService extends RootService {
             if (!f.exists()) {
                 return "404";
             } else if (f.isDirectory()) {
+                Path base = Paths.get(FileUtil.basePath).toAbsolutePath().normalize();
+                Path directory = f.toPath().toAbsolutePath().normalize();
+                if (!directory.startsWith(base)) return missing(response);
+                String relative = base.relativize(directory).toString().replace(File.separatorChar, '/');
+                String directoryPath = relative.isEmpty() ? "" : "/" + relative;
+                List<Map<String, String>> breadcrumbs = new ArrayList<>();
+                breadcrumbs.add(Map.of("name", "首页", "path", ""));
+                String crumbPath = "";
+                if (!relative.isEmpty()) {
+                    for (String part : relative.split("/")) {
+                        crumbPath += "/" + part;
+                        breadcrumbs.add(Map.of("name", part, "path", crumbPath));
+                    }
+                }
+                int parentSlash = directoryPath.lastIndexOf('/');
+                model.addAttribute("breadcrumbs", breadcrumbs);
+                model.addAttribute("directoryName", relative.isEmpty() ? "首页" : directory.getFileName().toString());
+                model.addAttribute("currentPath", directoryPath.isEmpty() ? "/" : directoryPath);
+                model.addAttribute("parentPath", parentSlash < 0 ? null : directoryPath.substring(0, parentSlash));
                 File[] files = f.listFiles();
-                assert files != null;
+                if (files == null) return missing(response);
                 Arrays.sort(files, (o1, o2) -> Collator.getInstance(Locale.CHINA).compare(o1.getName(), o2.getName()));
                 Arrays.sort(files, Comparator.comparing(file -> !file.isDirectory()));
                 String[] fileNames = new String[files.length];
+                String[] displayNames = new String[files.length];
                 boolean[] fileTypes = new boolean[files.length];
                 for (int i = 0; i < Objects.requireNonNull(files).length; i++) {
                     fileTypes[i] = files[i].isDirectory();
-                    fileNames[i] = requestPath + "/" + files[i].getName();
+                    fileNames[i] = directoryPath + "/" + files[i].getName();
+                    displayNames[i] = files[i].getName();
                 }
                 model.addAttribute("files", fileNames);
+                model.addAttribute("displayNames", displayNames);
                 model.addAttribute("types", fileTypes);
                 return "files";
             } else {
