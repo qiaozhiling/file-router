@@ -1,62 +1,118 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ch">
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
-<!--    <script th:src="@{jquery.min.js}"></script>-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频播放</title>
     <link th:href="@{/dplayer/DPlayer.min.css}" rel="stylesheet"/>
     <script th:src="@{/dplayer/DPlayer.min.js}"></script>
+    <style>
+        body { margin: 16px; font-family: sans-serif; }
+        #dplayer, #subtitle-controls { width: 90%; max-width: 1280px; margin: 12px auto; }
+        #subtitle-status { margin-left: 8px; }
+        #dplayer video::cue { font-size: 24px; background: rgba(0, 0, 0, .65); }
+    </style>
 </head>
 <body>
 <div id="dplayer"></div>
+<div id="subtitle-controls">
+    <label for="subtitle-select">字幕：</label>
+    <select id="subtitle-select" disabled><option value="">关闭</option></select>
+    <span id="subtitle-status" role="status" aria-live="polite">正在读取内封字幕…</span>
+</div>
 <script th:inline="javascript">
-    let filePath = [[${filePath}]];
-    filePath=filePath.replaceAll('[','%5B').replaceAll(']','%5D');
-    console.log(filePath)
+    const filePath = [[${filePath}]];
+    const mediaBase = [[${mediaBase}]];
+    // Encode segments once, preserving literal %, #, &, + and brackets in filenames.
+    const videoUrl = mediaBase + filePath.split('/').map(encodeURIComponent).join('/');
     const dp = new DPlayer({
         container: document.getElementById('dplayer'),
-        video: {
-            url: filePath,
-            pic: '/picture/leim.jpg',
-        }
+        video: { url: videoUrl, pic: '/picture/leim.jpg' }
     });
+    const select = document.getElementById('subtitle-select');
+    const status = document.getElementById('subtitle-status');
+    const tracks = new Map();
+    const mediaPath = filePath;
+    const apiBase = /*[[@{/api/subtitles}]]*/ '/api/subtitles';
+    const listUrl = apiBase + '?' + new URLSearchParams({ path: mediaPath });
+    let selectionVersion = 0;
 
-   /* dp.on('ended', function () {
-        console.log('player ended');
-    });*/
-    /*const $player = $("#dplayer");
-    var videoStatus = dp;//document.querySelector("video");
-    $player.on("touchstart", function (e) {
-        e.preventDefault();
-        startX = e.originalEvent.changedTouches[0].pageX,
-            startY = e.originalEvent.changedTouches[0].pageY;
-    });
-    $player.on("touchmove", function (e) {
-        e.preventDefault();
-        moveEndX = e.originalEvent.changedTouches[0].pageX,
-            moveEndY = e.originalEvent.changedTouches[0].pageY,
-            X = moveEndX - startX,
-            Y = moveEndY - startY;
-
-        if (Math.abs(X) > Math.abs(Y) && X > 0) {
-            videoStatus.currentTime += 10;
-        } else if (Math.abs(X) > Math.abs(Y) && X < 0) {
-            videoStatus.currentTime -= 10;
-        } else if (Math.abs(Y) > Math.abs(X) && Y > 0) {
-            videoStatus.volume -= 0.1;
-        } else if (Math.abs(Y) > Math.abs(X) && Y < 0) {
-            videoStatus.volume += 0.1;
+    function syncSubtitleTracks() {
+        const chosen = tracks.get(select.value);
+        const selectedTrack = chosen ? chosen.track : null;
+        // Include in-band MP4 tracks and tracks registered asynchronously by the browser.
+        for (const textTrack of dp.video.textTracks) {
+            if (textTrack.kind !== 'subtitles' && textTrack.kind !== 'captions') continue;
+            const mode = textTrack === selectedTrack ? 'showing' : 'disabled';
+            if (textTrack.mode !== mode) textTrack.mode = mode;
         }
-    });*/
-
-
-</script>
-<style>
-    #dplayer {
-        width: 90%;
-        max-height: 620px;
-        margin: 0 auto;
     }
-</style>
+    dp.video.textTracks.addEventListener('addtrack', syncSubtitleTracks);
+    dp.video.textTracks.addEventListener('change', syncSubtitleTracks);
+    dp.video.addEventListener('loadedmetadata', syncSubtitleTracks);
+    syncSubtitleTracks();
+
+    async function changeSubtitle() {
+        const version = ++selectionVersion;
+        const chosen = tracks.get(select.value);
+        syncSubtitleTracks();
+        if (!chosen) { status.textContent = '字幕已关闭'; return; }
+        status.textContent = '正在加载字幕…';
+        try {
+            if (chosen.readyState !== 2) {
+                await new Promise((resolve, reject) => {
+                    const cleanup = () => {
+                        chosen.removeEventListener('load', loaded);
+                        chosen.removeEventListener('error', failed);
+                    };
+                    const loaded = () => { cleanup(); syncSubtitleTracks(); resolve(); };
+                    const failed = () => { cleanup(); reject(new Error('track load failed')); };
+                    chosen.addEventListener('load', loaded);
+                    chosen.addEventListener('error', failed);
+                    if (!chosen.hasAttribute('src')) chosen.src = chosen.dataset.url;
+                    syncSubtitleTracks();
+                });
+            } else syncSubtitleTracks();
+            if (version === selectionVersion) status.textContent = '已启用 ' + chosen.label;
+        } catch (error) {
+            if (version === selectionVersion) status.textContent = '字幕加载失败，可关闭后重试；视频仍可播放。';
+            if (version === selectionVersion) chosen.removeAttribute('src');
+        }
+    }
+    select.addEventListener('change', changeSubtitle);
+
+    (async function () {
+        try {
+            const response = await fetch(listUrl);
+            if (!response.ok) throw new Error('subtitle request failed: ' + response.status);
+            const subtitles = await response.json();
+            for (const subtitle of subtitles) {
+                const id = String(subtitle.id);
+                const track = document.createElement('track');
+                track.kind = 'subtitles';
+                track.label = subtitle.label;
+                track.dataset.url = apiBase + '/track?' + new URLSearchParams({ path: mediaPath, track: id });
+                track.src = track.dataset.url;
+                const languages = { zho: 'zh', chi: 'zh', eng: 'en', jpn: 'ja' };
+                track.srclang = languages[subtitle.language] || subtitle.language || 'und';
+                dp.video.appendChild(track);
+                tracks.set(id, track);
+                track.track.mode = 'disabled';
+                track.addEventListener('load', syncSubtitleTracks);
+                select.add(new Option(subtitle.label, id));
+            }
+            select.disabled = subtitles.length === 0;
+            if (subtitles.length) {
+                select.value = String(subtitles[0].id);
+                await changeSubtitle();
+            } else {
+                status.textContent = '未找到可用的 MP4 内封文本字幕（tx3g）。';
+            }
+        } catch (error) {
+            status.textContent = '内封字幕读取失败，视频仍可播放。';
+            console.error(error);
+        }
+    })();
+</script>
 </body>
 </html>

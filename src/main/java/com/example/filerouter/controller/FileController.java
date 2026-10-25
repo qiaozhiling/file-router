@@ -2,18 +2,14 @@ package com.example.filerouter.controller;
 
 import com.example.filerouter.service.DownService;
 import com.example.filerouter.service.UpService;
-import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.FileInputStream;
-import java.io.IOException;
 
 @Controller
 public class FileController {
@@ -41,15 +37,22 @@ public class FileController {
     }
 
     @GetMapping("/v1/**")
-    public String getPreView1(HttpServletResponse response, HttpServletRequest request) {
-        return downService.getPreView(response, request);
+    public String getPreView1(HttpServletResponse response, HttpServletRequest request, Model model) {
+        return downService.getPreView(response, request, model);
     }
 
     @GetMapping("/v2/**")
-    public String getPreView2(HttpServletRequest request, Model model) {
-        String path = downService.gv2(request);
-        model.addAttribute("filePath", path);
-        return "video";
+    public void getPreView2(HttpServletResponse response, HttpServletRequest request) {
+        // Preserve the raw URL encoding, including literal %, #, Chinese and brackets in filenames.
+        String context = request.getContextPath();
+        String suffix = request.getRequestURI().substring(context.length() + "/v2".length());
+        response.setStatus(HttpServletResponse.SC_FOUND);
+        response.setHeader("Location", context + "/v1" + suffix);
+    }
+
+    @GetMapping("/media/**")
+    public String media(HttpServletResponse response, HttpServletRequest request) {
+        return downService.getMedia(response, request, request.getServletPath().substring("/media".length()));
     }
 
     @GetMapping("/")

@@ -32,18 +32,21 @@ public class UpService extends RootService {
                 FileUtil.checkDir(tempFile);
                 file.transferTo(tempFile);
                 AccompanyThread mergeThread;
+                synchronized (this) {
+                    mergeThread = uploadingFileMap.get(name);
+                    if (mergeThread == null) {
+                        mergeThread = new AccompanyThread(chunks, name, uploadingFileMap);
+                        uploadingFileMap.put(name, mergeThread);
+                    }
+                }
                 if (chunk == 0) { // first clip
                     logger.info("start " + chunks + " clips: " + name);
-                    mergeThread = new AccompanyThread(chunks, name, uploadingFileMap);
-                    uploadingFileMap.put(name, mergeThread);
                     pool.submit(mergeThread);
                 } else if (chunk == chunks - 1) { // last clip
                     logger.info("start merge : " + name);
-                    mergeThread = getAcThread(name);
                     mergeThread.over();
                 } else {
                     logger.debug("size of map : " + uploadingFileMap.size());
-                    mergeThread = getAcThread(name);
                     mergeThread.feed();
                     logger.debug("feed " + chunk + " : " + name);
                 }
@@ -52,13 +55,4 @@ public class UpService extends RootService {
             e.printStackTrace();
         }
     }
-
-    private AccompanyThread getAcThread(String name) {
-        AccompanyThread mergeThread;
-        do {
-            mergeThread = uploadingFileMap.get(name);
-        } while (mergeThread == null);
-        return mergeThread;
-    }
-
 }

@@ -12,6 +12,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.Collator;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -61,26 +63,52 @@ public class DownService extends RootService {
         }
     }
 
-    public String getPreView(HttpServletResponse response, HttpServletRequest request) {
+    public String getPreView(HttpServletResponse response, HttpServletRequest request, Model model) {
+        String path = request.getServletPath().substring("/v1".length());
+        if (path.toLowerCase(Locale.ROOT).matches(".*\\.(mp4|mkv|rmvb|avi|webm|m4v|mov)$")) {
+            try {
+                if (resolveMedia(path) == null) return missing(response);
+                model.addAttribute("filePath", path);
+                model.addAttribute("mediaBase", request.getContextPath() + "/media");
+                return "video";
+            } catch (IOException | IllegalArgumentException e) {
+                return missing(response);
+            }
+        }
+        // Images, audio and PDFs retain direct browser previews.
+        return getMedia(response, request, path);
+    }
+
+    public String getMedia(HttpServletResponse response, HttpServletRequest request, String requestPath) {
         try {
-            String path = FileUtil.basePath + request.getServletPath().replaceFirst("/v1", "");
-            File f = new File(path);
-            if (f.exists() & !f.isDirectory()) {
-                request.setAttribute(NSRRH.ATTR_FILE, path);
+            File f = resolveMedia(requestPath);
+            if (f != null) {
+                request.setAttribute(NSRRH.ATTR_FILE, f.getPath());
                 nsrrh.handleRequest(request, response);
                 return null;
             }
-            return "404";
+            return missing(response);
         } catch (ClientAbortException e) {
             return null;
+        } catch (IllegalArgumentException e) {
+            return missing(response);
         } catch (ServletException | IOException e) {
             e.printStackTrace();
             return null;
         }
     }
 
-    public String gv2(HttpServletRequest request) {
-        return request.getServletPath().replaceFirst("v2", "v1");
-//                .replaceAll("\\[", "%5B").replaceAll("]", "%5D")
+    private File resolveMedia(String requestPath) throws IOException {
+        if (!requestPath.startsWith("/") || requestPath.contains("\\")) return null;
+        Path root = Paths.get(FileUtil.basePath).toRealPath();
+        Path file = root.resolve(requestPath.substring(1)).normalize();
+        if (!file.startsWith(root) || !file.toFile().isFile()) return null;
+        Path real = file.toRealPath();
+        return real.startsWith(root) ? real.toFile() : null;
+    }
+
+    private String missing(HttpServletResponse response) {
+        response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        return "404";
     }
 }
