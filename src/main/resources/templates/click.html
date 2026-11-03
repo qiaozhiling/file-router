@@ -2,36 +2,80 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>ClickBoard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>剪贴板 · File Router</title>
+    <link rel="stylesheet" th:href="@{/clipboard.css}">
     <script defer th:src="@{/clipboard.js}"></script>
 </head>
 <body>
-<div>
-    <input id="textup" name="cont">
-    <button id="submit" type="button" th:data-submit-url="@{/uptext}">submit</button>
-    <!--    <button id="paste">paste</button>-->
-</div>
-
-<div th:if="${type}=='text'" style="margin-top: 1em">
-    <input id="textdown" th:value="${content}">
-    <button id="copy" type="button">copy</button>
-</div>
-<div style="margin-top: 1em">
-    <img th:if="${type}=='image'" th:src="${content}" alt="" style="max-width:100%; overflow:hidden; ">
-</div>
-
-<style>
-    button {
-        position: relative;
-        display: inline-block;
-        cursor: pointer;
-        background: #0075ff;
-        padding: 10px 15px;
-        color: #ffffff;
-        text-align: center;
-        border-radius: 3px;
-        overflow: hidden
-    }
-</style>
+<main class="page">
+    <nav class="navigation" aria-label="页面导航">
+        <a class="back-link" th:href="@{/f}"><span aria-hidden="true">←</span> 返回文件</a>
+        <span class="brand">File Router</span>
+    </nav>
+    <header class="page-header">
+        <div class="page-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="8" y="3" width="8" height="4" rx="1.5"/>
+                <path d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M8 12h8M8 16h5"/>
+            </svg>
+        </div>
+        <h1>剪贴板</h1>
+        <p>在这里提交文字，查看电脑上的剪贴板内容。</p>
+    </header>
+    <div class="panels">
+        <section class="panel" aria-labelledby="submit-heading">
+            <div class="panel-heading">
+                <div>
+                    <h2 id="submit-heading">提交文本</h2>
+                    <p id="submit-description">粘贴或输入你要提交的内容</p>
+                </div>
+                <span class="badge">输入</span>
+            </div>
+            <label class="sr-only" for="textup">要提交的文本</label>
+            <textarea id="textup" name="cont" rows="8" placeholder="在这里输入或粘贴文本…" aria-describedby="submit-description"></textarea>
+            <div class="panel-footer">
+                <span class="hint">支持多行文本</span>
+                <button id="submit" class="button button-primary" type="button" th:data-submit-url="@{/uptext}">提交文本 <span aria-hidden="true">↑</span></button>
+            </div>
+        </section>
+        <section class="panel" aria-labelledby="clipboard-heading">
+            <div class="panel-heading">
+                <div>
+                    <h2 id="clipboard-heading">电脑剪贴板</h2>
+                    <p>打开页面时读取的内容</p>
+                </div>
+                <span class="badge" th:text="${type == 'text' ? '文本' : (type == 'image' ? '图片' : '暂无内容')}">暂无内容</span>
+            </div>
+            <th:block th:if="${type == 'text'}">
+                <label class="sr-only" for="textdown">电脑剪贴板文本</label>
+                <textarea id="textdown" class="clipboard-text" rows="8" th:text="${content}" readonly></textarea>
+                <div class="panel-footer">
+                    <a class="refresh-link" th:href="@{/c}">刷新内容 <span aria-hidden="true">↻</span></a>
+                    <button id="copy" class="button button-primary" type="button">复制文本</button>
+                </div>
+            </th:block>
+            <th:block th:if="${type == 'image'}">
+                <div class="image-preview">
+                    <img th:src="${content}" alt="电脑剪贴板中的图片">
+                </div>
+                <div class="panel-footer">
+                    <span class="hint">长按图片可使用浏览器菜单</span>
+                    <a class="button button-secondary" th:href="@{/c}">刷新内容 <span aria-hidden="true">↻</span></a>
+                </div>
+            </th:block>
+            <th:block th:if="${type != 'text' and type != 'image'}">
+                <div class="empty-state">
+                    <span class="empty-icon" aria-hidden="true">—</span>
+                    <h3>暂无可显示内容</h3>
+                    <p>在电脑上复制文字或图片后，刷新试试</p>
+                </div>
+                <div class="panel-footer panel-footer-end">
+                    <a class="button button-secondary" th:href="@{/c}">刷新内容 <span aria-hidden="true">↻</span></a>
+                </div>
+            </th:block>
+        </section>
+    </div>
+</main>
 </body>
 </html>
