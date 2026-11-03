@@ -55,7 +55,9 @@ function fixture(options = {}) {
             this.off = (name, callback) => handlers.get(name)?.delete(callback);
             this.load = async (url, value = {}) => {
                 actions.push(['load', url]);
-                if (options.loadError) throw new Error('load failed');
+                if (options.beforeLoad) await options.beforeLoad(url);
+                if (options.loadError === true || (typeof options.loadError === 'function' && options.loadError(url))) throw new Error('load failed');
+                if (options.streamsFor) streams = options.streamsFor(url);
                 state = 4; selectedSubtitle = 11; selectedAudio = 1;
                 external = value.externalSubtitles || [];
                 emit('loaded');
@@ -73,7 +75,7 @@ function fixture(options = {}) {
             this.selectSubtitle = async id => { selectedSubtitle = id; actions.push(['subtitle', id]); subtitleVisible=true; emit('changed'); };
             this.selectAudio = async id => { selectedAudio = id; actions.push(['audio', id]); };
             this.setSubtitleEnable = enabled => { subtitleVisible=enabled; actions.push(['subtitlesEnabled', enabled]); };
-            this.seek = async timestamp => { actions.push(['seek', timestamp]); subtitleVisible=true; emit('seeked'); };
+            this.seek = async timestamp => { actions.push(['seek', timestamp]); if (options.beforeSeek) await options.beforeSeek(); subtitleVisible=true; emit('seeked'); };
             this.getStatus = () => state;
             this.isMSE = () => !!options.mse;
             this.getPlaybackRate = () => 1.5;
@@ -81,7 +83,7 @@ function fixture(options = {}) {
             this.setPlaybackRate = rate => actions.push(['rate', rate]);
             this.setVolume = volume => actions.push(['volume', volume]);
             this.stop = async () => { actions.push(['stop']); state = 0; };
-            this.play = async () => { actions.push(['play']); state = 6; emit('played'); subtitleVisible=true; emit('time'); };
+            this.play = async () => { actions.push(['play']); if (options.playError) throw new Error('autoplay blocked'); state = 6; emit('played'); subtitleVisible=true; emit('time'); };
             this.pause = () => { actions.push(['pause']); state = 8; };
             this.destroy = async () => { destroyed++; };
         }
@@ -246,9 +248,71 @@ test('all preview extensions use one template entry and encode special filenames
         let config;
         const filePath = '/目录/字 & %#.' + extension;
         const inline = template.match(/<script th:inline="javascript">([\s\S]*?)<\/script>/)[1]
-            .replace('[[${filePath}]]', JSON.stringify(filePath)).replace('[[${mediaBase}]]', JSON.stringify('/app/media'));
-        vm.runInNewContext(inline, {document: {getElementById: () => ({})}, FileRouterVideoPlayer: {load: async (container, value) => {config = value;}}, console});
+            .replace('[[${filePath}]]', JSON.stringify(filePath)).replace('[[${mediaBase}]]', JSON.stringify('/app/media'))
+            .replace('[[${episodes}]]', JSON.stringify([{name: filePath.split('/').at(-1), path: filePath}]));
+        vm.runInNewContext(inline, {document: {getElementById: () => ({})}, FileRouterPlaylist: () => () => {},
+            FileRouterVideoPlayer: {load: async (container, value) => {config = value; return {destroy: async () => {}};}}, console});
         assert.equal(decodeURIComponent(config.url.substring('/app/media'.length)), filePath);
         assert.ok(!template.includes('new DPlayer'));
     }
+});
+
+test('switching episodes reuses the fullscreen player and preserves rate, volume and subtitles-off', async () => {
+    const f=fixture(); const player=await f.load('/EP1.mkv');
+    player.setSubtitleEnable(false); f.actions.length=0;
+    await player.changeSource({url:'/app/media/EP2.mkv',filePath:'/EP2.mkv'});
+    assert.deepEqual(f.actions.filter(a=>['stop','load','play','rate','volume'].includes(a[0])),
+        [['stop'],['load','/app/media/EP2.mkv'],['rate',1.5],['volume',0.4],['play']]);
+    assert.equal(f.subtitleVisible(),false);
+    assert.equal(f.config().fullscreenDom,f.container);
+    assert.equal(f.destroyed(),0);
+    assert.equal(f.scripts.length,2);
+    f.actions.length=0;
+    await player.seek(15000n);
+    assert.ok(f.actions.some(a=>a[0]==='load' && a[1]==='/app/media/EP2.mkv'));
+    assert.equal(f.subtitleVisible(),false);
+});
+
+test('each episode loads its own fallback subtitles without carrying tracks from the previous source', async () => {
+    const f=fixture({streamsFor:()=>[]}); const player=await f.load('/EP1.mp4');
+    await player.changeSource({url:'/app/media/EP2.mp4',filePath:'/EP2.mp4'});
+    const tracks=player.getExternalSubtitle();
+    assert.equal(tracks.length,1);
+    assert.equal(new URL(tracks[0].source,'http://local').searchParams.get('path'),'/EP2.mp4');
+    assert.equal(new URL(f.requests.at(-1),'http://local').searchParams.get('path'),'/EP2.mp4');
+});
+
+test('source changes serialize loads and ignore seek requests until switching finishes', async () => {
+    let release;
+    const f=fixture({beforeLoad:url=>url.includes('EP2') ? new Promise(resolve=>{release=resolve;}) : undefined});
+    const player=await f.load('/EP1.mkv');
+    const switching=player.changeSource({url:'/app/media/EP2.mkv',filePath:'/EP2.mkv'});
+    await flush();
+    await assert.rejects(player.changeSource({url:'/app/media/EP3.mkv',filePath:'/EP3.mkv'}),/稍后切集/);
+    await player.seek(123n);
+    assert.equal(f.actions.filter(a=>a[0]==='seek').length,0);
+    release(); await switching;
+    assert.equal(f.actions.filter(a=>a[0]==='load').length,2);
+});
+
+test('a pending native seek prevents a concurrent source replacement', async () => {
+    let release;
+    const f=fixture({mse:true,beforeSeek:()=>new Promise(resolve=>{release=resolve;})});
+    const player=await f.load(); f.setState(6);
+    const seeking=player.seek(123n);
+    await assert.rejects(player.changeSource({url:'/next.mkv',filePath:'/next.mkv'}),/稍后切集/);
+    assert.equal(f.actions.filter(a=>a[0]==='stop').length,0);
+    release(); await seeking;
+});
+
+test('a failed episode can be retried, and an autoplay block leaves the selected source ready to play', async () => {
+    let fail=true;
+    const f=fixture({loadError:url=>url.includes('EP2') && fail}); const player=await f.load('/EP1.mkv');
+    await assert.rejects(player.changeSource({url:'/EP2.mkv',filePath:'/EP2.mkv'}),/重新选集重试/);
+    fail=false;
+    await player.changeSource({url:'/EP2.mkv',filePath:'/EP2.mkv'});
+    assert.equal(f.destroyed(),0);
+    const blocked=fixture({playError:true}); const other=await blocked.load();
+    await other.changeSource({url:'/EP2.mkv',filePath:'/EP2.mkv'});
+    assert.match(blocked.status.textContent,/点击播放/);
 });

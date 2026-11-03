@@ -81,10 +81,13 @@ flowchart TD
 | `service/DownService.java` | 识别视频扩展名、校验真实文件路径、选择页面或文件响应 |
 | `handler/NSRRH.java` | 从请求属性读取文件路径，交给资源处理器发送文件并支持 Range |
 | `templates/video.html`、`static/video-player.js` | 初始化播放器、完整区域全屏、音轨与字幕、字幕关闭状态、跳转兼容、错误显示与销毁 |
+| `static/video-playlist.js` | 同目录选集、上一集/下一集、全屏选集面板与当前播放地址更新 |
 | `static/mobile-player-controls.js`、`static/mobile-player.css` | 手机布局、控制栏、滑动进度、双击跳转、长按倍速、设置弹窗 |
 | `static/libmedia/` | 随应用发布的播放器、动态模块和 WASM 资源 |
 
 视频入口识别 MP4、MKV、WebM、M4V、MOV、AVI、RMVB。扩展名用于选择视频页面，不保证内部所有编码均可播放。图片、音频和 PDF 等由浏览器根据响应直接预览。
+
+播放页由后端提供当前目录的视频列表，文件名按数字自然排序，不扫描上级或子目录。前端复用同一播放器切集，保留全屏、倍速、音量和字幕开关；字幕轨道重新从新文件读取。列表在打开页面时生成，目录内容变化后需刷新页面。
 
 ```mermaid
 sequenceDiagram

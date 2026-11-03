@@ -4,23 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>视频播放</title>
-    <script th:src="@{/mobile-player-controls.js(v='20261103-5')}"></script>
-    <script th:src="@{/video-player.js(v='20261103-7')}"></script>
-    <link rel="stylesheet" th:href="@{/mobile-player.css(v='20261103-7')}">
+    <script th:src="@{/mobile-player-controls.js(v='20261103-8')}"></script>
+    <script th:src="@{/video-player.js(v='20261103-8')}"></script>
+    <script th:src="@{/video-playlist.js(v='20261103-8')}"></script>
+    <link rel="stylesheet" th:href="@{/mobile-player.css(v='20261103-8')}">
 </head>
 <body>
 <div id="video-player" aria-label="视频播放器"></div>
 <div id="playback-status" role="status" aria-live="polite">正在加载播放器…</div>
+<section id="episode-navigation" aria-label="视频选集"></section>
 <script th:inline="javascript">
     const filePath = [[${filePath}]];
     const mediaBase = [[${mediaBase}]];
     const assetBase = /*[[@{/libmedia/}]]*/ '/libmedia/';
     const subtitlesApi = /*[[@{/api/subtitles}]]*/ '/api/subtitles';
+    const previewBase = /*[[@{/v1}]]*/ '/v1';
+    const episodes = [[${episodes}]];
     // Encode each segment exactly once, including literal percent signs and fragments.
     const videoUrl = mediaBase + filePath.split('/').map(encodeURIComponent).join('/');
     FileRouterVideoPlayer.load(document.getElementById('video-player'), {
         url: videoUrl, assets: assetBase, subtitlesApi, filePath,
         status: document.getElementById('playback-status')
+    }).then(player => {
+        const disposePlaylist = FileRouterPlaylist(document.getElementById('video-player'),
+            document.getElementById('episode-navigation'), player,
+            {episodes, filePath, mediaBase, previewBase, status: document.getElementById('playback-status')});
+        const destroy = player.destroy.bind(player);
+        player.destroy = async () => { disposePlaylist(); return destroy(); };
     }).catch(error => {
         document.getElementById('playback-status').textContent = error.message;
         console.error(error);

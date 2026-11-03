@@ -120,20 +120,27 @@
             player.on('error', () => { status.textContent = '视频播放失败，请刷新重试。'; });
             player.on('played', () => { status.textContent = ''; });
             const subtitles = subtitleControls(container, player);
-            const disposeTouch = global.FileRouterTouchControls ? global.FileRouterTouchControls(container, player) : () => {};
+            const attachTouch = () => global.FileRouterTouchControls ? global.FileRouterTouchControls(container, player) : () => {};
+            let disposeTouch = attachTouch(), reloading = false, disposed = false;
             const destroy = player.destroy.bind(player);
-            player.destroy = async () => { subtitles.dispose(); disposeTouch(); return destroy(); };
+            player.destroy = async () => {
+                disposed = true;
+                subtitles.dispose(); disposeTouch();
+                return destroy();
+            };
             global.addEventListener('pagehide', () => player.destroy(), { once: true });
-            try {
-                await player.load(url);
+            const subtitleStreams = () => player.getStreams().filter(stream => stream.mediaType === 'Subtitle');
+            async function loadMedia() {
+                await player.load(url, {externalSubtitles: []});
+                if (disposed) return '';
                 let subtitleWarning = '';
-                const subtitleStreams = () => player.getStreams().filter(stream => stream.mediaType === 'Subtitle');
                 // Retain the Java tx3g reader as a fallback, without duplicate tracks.
                 if (!subtitleStreams().length && /\.mp4$/i.test(filePath)) {
                     try {
                         const response = await fetch(subtitlesApi + '?' + new URLSearchParams({path: filePath}));
                         if (!response.ok) throw new Error('字幕读取失败');
                         for (const track of await response.json()) {
+                            if (disposed) return '';
                             await player.loadExternalSubtitle({
                                 source: subtitlesApi + '/track.vtt?' + new URLSearchParams({path: filePath, track: track.id}),
                                 title: track.label, lang: track.language
@@ -143,15 +150,53 @@
                         subtitleWarning = '字幕加载失败，视频仍可播放。';
                     }
                 }
+                if (!disposed) player.setSubtitleEnable(subtitles.enabled);
+                return subtitleWarning;
+            }
+            // Source changes and seeks share one lock: libmedia's async pipeline calls must not overlap.
+            player.changeSource = async next => {
+                if (disposed) throw new Error('播放器已关闭。');
+                if (reloading || [5, 9, 10].includes(player.getStatus())) throw new Error('正在跳转，请稍后切集。');
+                reloading = true;
+                // Clear queued seeks and any temporary hold speed before capturing preferences.
+                disposeTouch();
+                const rate = player.getPlaybackRate(), volume = player.getVolume();
+                status.textContent = '正在切换视频…';
+                try {
+                    await player.stop();
+                    if (disposed) return;
+                    url = next.url; filePath = next.filePath;
+                    const warning = await loadMedia();
+                    if (disposed) return;
+                    player.setPlaybackRate(rate);
+                    player.setVolume(volume);
+                    try {
+                        await player.play();
+                        status.textContent = warning;
+                    } catch (error) {
+                        status.textContent = '视频已切换，播放未开始，请点击播放重试。';
+                    }
+                    if (!disposed) player.setSubtitleEnable(subtitles.enabled);
+                } catch (error) {
+                    throw new Error('视频切换失败，可重新选集重试。');
+                } finally {
+                    reloading = false;
+                    if (!disposed) disposeTouch = attachTouch();
+                }
+            };
+            try {
+                const subtitleWarning = await loadMedia();
                 // Recreate single-threaded decode pipelines on seeking. Flushing an
                 // active WASM pipeline can wait indefinitely for buffered frames.
                 // Seeking before play uses the demuxer's Range-based initial seek.
                 const seek = player.seek.bind(player);
-                let reloading = false;
                 player.seek = async timestamp => {
-                    if (reloading) return;
-                    if (player.getStatus() === 4 || player.isMSE()) return seek(timestamp);
+                    if (reloading || disposed) return;
                     reloading = true;
+                    if (player.getStatus() === 4 || player.isMSE()) {
+                        try { return await seek(timestamp); }
+                        finally { reloading = false; }
+                    }
                     const paused = player.getStatus() === 8;
                     const rate = player.getPlaybackRate();
                     const volume = player.getVolume();

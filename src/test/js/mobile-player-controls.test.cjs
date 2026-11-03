@@ -93,8 +93,8 @@ test('a hold after entering fullscreen shows speed feedback until release and wo
     }
 });
 
-test('settings close icon, tabs and overlay never capture touch or swallow their click', () => {
-    for (const className of ['.avplayer-ui-settings', '.avplayer-ui-mask', '.avplayer-ui-menu']) {
+test('settings and playlist panels never capture picture gestures or swallow their click', () => {
+    for (const className of ['.avplayer-ui-settings', '.avplayer-ui-mask', '.avplayer-ui-menu', '.player-episode-overlay', '.player-episode-toolbar']) {
         const f=fixture(); f.uiState.showSettings=true;
         const target=f.target(className);
         f.fire('pointerdown',{target});f.tick(450);f.fire('pointerup',{target});

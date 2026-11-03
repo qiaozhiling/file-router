@@ -56,3 +56,53 @@ body { margin: 16px; font-family: system-ui, sans-serif; background: #f5f6f8; }
 #video-player .player-subtitle-off-option:focus-visible { outline: 2px solid var(--libmedia-ui-theme); outline-offset: -2px; }
 #video-player.player-subtitles-off .avplayer-ui-control-subtitle-track .libmedia-ui-selector-item.active:not(.player-subtitle-off-option) { color: var(--libmedia-ui-font-color); }
 #video-player.player-subtitles-off .avplayer-ui-control-subtitle-track-value::after { content: '（关闭）'; }
+
+/* Episode navigation shares the fullscreen container, without crowding the playback footer. */
+#episode-navigation { box-sizing: border-box; width: 90%; max-width: 1280px; margin: 12px auto 24px; padding: 20px; background: #fff; border: 1px solid #e4e7ed; border-radius: 12px; color: #202533; }
+.episode-current-name { margin: 0; font-size: 18px; line-height: 1.6; overflow-wrap: anywhere; }
+.episode-position { margin: 8px 0 16px; color: #6b7280; font-size: 13px; }
+.episode-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.episode-action, .episode-close { box-sizing: border-box; min-height: 44px; padding: 10px 18px; border: 1px solid #dce0ea; border-radius: 8px; background: #f5f6fb; color: #343c53; font: inherit; font-size: 14px; cursor: pointer; }
+.episode-next { color: #fff; border-color: #4f46e5; background: #4f46e5; }
+.episode-action:disabled, .episode-row:disabled { opacity: .4; cursor: default; }
+.episode-action:focus-visible, .episode-close:focus-visible, .episode-row:focus-visible { outline: 2px solid #a5b4fc; outline-offset: -3px; }
+.player-episode-toolbar { display: none; position: absolute; z-index: 25; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); gap: 6px; }
+.player-episode-toolbar .episode-action, .episode-close { border-color: #ffffff26; background: #20232de6; color: white; padding: 8px 12px; }
+.player-episode-toolbar .episode-next { background: #4f46e5e6; }
+.player-episode-overlay { position: absolute; z-index: 40; inset: 0; display: flex; justify-content: flex-end; background: #0008; touch-action: pan-y; }
+.player-episode-overlay[hidden] { display: none; }
+.player-episode-panel { display: flex; flex-direction: column; box-sizing: border-box; width: min(440px, 92%); height: 100%; padding-right: env(safe-area-inset-right); background: #191c25; color: #f5f6fc; box-shadow: -8px 0 24px #0004; }
+.episode-panel-header { display: flex; align-items: center; flex-shrink: 0; gap: 10px; padding: 10px 16px; padding-top: max(10px, env(safe-area-inset-top)); border-bottom: 1px solid #ffffff1a; }
+.episode-panel-header h2 { margin: 0; font-size: 17px; }
+.episode-panel-count { flex: 1; color: #aeb5c5; font-size: 12px; }
+.episode-list { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 12px max(12px, env(safe-area-inset-bottom)); }
+.episode-row { display: flex; align-items: center; gap: 12px; box-sizing: border-box; width: 100%; min-height: 48px; margin-bottom: 4px; padding: 12px; text-align: left; font: inherit; font-size: 14px; line-height: 1.5; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #d7dce8; cursor: pointer; }
+.episode-number { min-width: 24px; flex-shrink: 0; color: #929db4; font-variant-numeric: tabular-nums; }
+.episode-name { overflow-wrap: anywhere; min-width: 0; }
+.episode-row.is-current { color: #e0e7ff; background: #4f46e533; border-color: #818cf855; }
+.episode-row.is-current .episode-number { color: #a5b4fc; }
+.player-episode-message { display: none; position: absolute; z-index: 30; bottom: max(110px, 25%); left: 50%; transform: translateX(-50%); max-width: 85%; box-sizing: border-box; border-radius: 10px; padding: 10px 16px; background: #000b; color: white; text-align: center; font-size: 14px; pointer-events: none; }
+#video-player:fullscreen .player-episode-toolbar { display: flex; }
+#video-player:fullscreen .player-episode-message:not(:empty) { display: block; }
+#video-player:-webkit-full-screen .player-episode-toolbar { display: flex; }
+#video-player:-webkit-full-screen .player-episode-message:not(:empty) { display: block; }
+#video-player.player-touch.player-controls-hidden:not(.player-episodes-open) .player-episode-toolbar,
+#video-player:not(.player-touch).player-toolbar-hidden:not(.player-episodes-open) .player-episode-toolbar { opacity: 0; pointer-events: none; }
+#video-player .player-episode-toolbar:focus-within { opacity: 1; pointer-events: auto; }
+@media (hover: hover) {
+    .episode-action:not(:disabled):hover { filter: brightness(1.12); }
+    .episode-row:not(:disabled):hover { background: #ffffff12; }
+}
+@media (max-width: 700px), (pointer: coarse) {
+    #episode-navigation { width: 100%; margin: 0; padding: 18px 16px; border: 0; border-top: 1px solid #ffffff1a; border-radius: 0; background: #171922; color: #f0f2fa; }
+    .episode-current-name { font-size: 15px; }
+    .episode-position { color: #9ca5ba; }
+    .episode-actions .episode-action { flex: 1; padding: 10px 12px; }
+    .episode-actions .episode-action:not(.episode-next) { background: #282c3a; border-color: #ffffff1a; color: #e0e5f5; }
+    .player-episode-toolbar .episode-action { min-height: 40px; font-size: 13px; }
+    .episode-panel-header { padding: 6px 12px; padding-top: max(6px, env(safe-area-inset-top)); }
+}
+@media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
+    #video-player .player-episode-toolbar { display: flex; }
+    #video-player .player-episode-message:not(:empty) { display: block; }
+}

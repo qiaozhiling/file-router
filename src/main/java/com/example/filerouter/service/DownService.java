@@ -12,6 +12,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.Collator;
@@ -22,10 +23,14 @@ import java.util.Map;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 @Service
 public class DownService extends RootService {
+    private static final Pattern VIDEO = Pattern.compile(".*\\.(mp4|mkv|rmvb|avi|webm|m4v|mov)$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern NAME_PART = Pattern.compile("[0-9]+|[^0-9]+");
 
     @Autowired
     private NSRRH nsrrh;
@@ -90,11 +95,12 @@ public class DownService extends RootService {
 
     public String getPreView(HttpServletResponse response, HttpServletRequest request, Model model) {
         String path = request.getServletPath().substring("/v1".length());
-        if (path.toLowerCase(Locale.ROOT).matches(".*\\.(mp4|mkv|rmvb|avi|webm|m4v|mov)$")) {
+        if (VIDEO.matcher(path).matches()) {
             try {
                 if (resolveMedia(path) == null) return missing(response);
                 model.addAttribute("filePath", path);
                 model.addAttribute("mediaBase", request.getContextPath() + "/media");
+                model.addAttribute("episodes", videoSiblings(path));
                 return "video";
             } catch (IOException | IllegalArgumentException e) {
                 return missing(response);
@@ -109,7 +115,7 @@ public class DownService extends RootService {
             File f = resolveMedia(requestPath);
             if (f != null) {
                 // Keep original video bytes seekable without persisting a browser media cache.
-                if (requestPath.toLowerCase(Locale.ROOT).matches(".*\\.(mp4|mkv|rmvb|avi|webm|m4v|mov)$")) {
+                if (VIDEO.matcher(requestPath).matches()) {
                     response.setHeader("Cache-Control", "no-store");
                 }
                 request.setAttribute(NSRRH.ATTR_FILE, f.getPath());
@@ -125,6 +131,50 @@ public class DownService extends RootService {
             e.printStackTrace();
             return null;
         }
+    }
+
+    private List<Map<String, String>> videoSiblings(String requestPath) {
+        List<Map<String, String>> episodes = new ArrayList<>();
+        String parent = requestPath.substring(0, requestPath.lastIndexOf('/') + 1);
+        try {
+            Path root = Paths.get(FileUtil.basePath).toRealPath();
+            File[] files = root.resolve(parent.substring(1)).normalize().toFile().listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    String path = parent + file.getName();
+                    // Check every candidate, including symlinks, against the media root.
+                    if (file.isFile() && VIDEO.matcher(file.getName()).matches()) {
+                        try {
+                            if (resolveMedia(path) != null) episodes.add(Map.of("name", file.getName(), "path", path));
+                        } catch (IOException ignored) { /* A disappearing sibling must not prevent playback. */ }
+                    }
+                }
+            }
+        } catch (IOException | SecurityException ignored) { /* Keep the current video usable without a listing. */ }
+        if (episodes.stream().noneMatch(item -> item.get("path").equals(requestPath))) {
+            episodes.add(Map.of("name", requestPath.substring(requestPath.lastIndexOf('/') + 1), "path", requestPath));
+        }
+        Collator collator = Collator.getInstance(Locale.CHINA);
+        episodes.sort((left, right) -> compareVideoNames(left.get("name"), right.get("name"), collator));
+        return episodes;
+    }
+
+    private static int compareVideoNames(String left, String right, Collator collator) {
+        Matcher a = NAME_PART.matcher(left), b = NAME_PART.matcher(right);
+        while (true) {
+            boolean hasA = a.find(), hasB = b.find();
+            if (!hasA || !hasB) {
+                if (hasA != hasB) return hasA ? 1 : -1;
+                break;
+            }
+            String x = a.group(), y = b.group();
+            int result = x.charAt(0) >= '0' && x.charAt(0) <= '9' && y.charAt(0) >= '0' && y.charAt(0) <= '9'
+                    ? new BigInteger(x).compareTo(new BigInteger(y)) : collator.compare(x, y);
+            if (result != 0) return result;
+        }
+        // Deterministic tie-breaker for names such as EP2 and EP02.
+        int result = collator.compare(left, right);
+        return result != 0 ? result : left.compareTo(right);
     }
 
     private File resolveMedia(String requestPath) throws IOException {

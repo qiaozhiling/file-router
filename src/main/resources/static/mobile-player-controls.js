@@ -19,7 +19,7 @@
         container.appendChild(gestureHint);
         const isTouch = event => event.pointerType === 'touch' || event.pointerType === 'pen';
         // The footer's gradient covers part of the picture. Only its actual controls consume gestures.
-        const control = target => target.closest('.avplayer-ui-control, .avplayer-ui-progress-container, .avplayer-ui-header, .avplayer-ui-folder-container, .avplayer-ui-context-menu, .avplayer-ui-menu, .avplayer-ui-mask, .avplayer-ui-settings, button, input, select, a');
+        const control = target => target.closest('.avplayer-ui-control, .avplayer-ui-progress-container, .avplayer-ui-header, .avplayer-ui-folder-container, .avplayer-ui-context-menu, .avplayer-ui-menu, .avplayer-ui-mask, .avplayer-ui-settings, .player-episode-overlay, .player-episode-toolbar, button, input, select, a');
         const progress = target => target.closest('.avplayer-ui-progress-container');
         function listen(target, name, callback, options) {
             target.addEventListener(name, callback, options);
@@ -248,6 +248,7 @@
         player.on('paused', onPaused);
         player.on('seeked', drainSeek);
         player.on('changed', drainSeek);
+        show(true);
         return () => {
             if (disposed) return;
             disposed = true;
