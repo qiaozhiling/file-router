@@ -20,6 +20,72 @@
             document.head.appendChild(element);
         });
     }
+    function subtitleControls(container, player) {
+        let enabled = true, disposed = false;
+        const originalEnable = player.setSubtitleEnable;
+        function updateMenus() {
+            if (disposed) return;
+            container.classList.toggle('player-subtitles-off', !enabled);
+            for (const menu of container.querySelectorAll('.avplayer-ui-control-subtitle-track .libmedia-ui-selector')) {
+                let option = menu.querySelector('.player-subtitle-off-option');
+                if (!option) {
+                    option = document.createElement('button');
+                    option.type = 'button';
+                    option.className = 'libmedia-ui-selector-item player-subtitle-off-option';
+                    option.textContent = '不使用字幕';
+                    menu.prepend(option);
+                }
+                option.classList.toggle('active', !enabled);
+                option.setAttribute('aria-pressed', String(!enabled));
+            }
+        }
+        player.setSubtitleEnable = value => {
+            enabled = !!value;
+            const result = originalEnable.call(player, enabled);
+            updateMenus();
+            return result;
+        };
+        function onClick(event) {
+            const item = event.target.closest('.libmedia-ui-selector-item');
+            if (!item || !item.closest('.avplayer-ui-control-subtitle-track')) return;
+            if (item.classList.contains('player-subtitle-off-option')) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                player.setSubtitleEnable(false);
+            } else if (item.tagName === 'DIV' && !enabled) {
+                // Selecting the current track may not call selectSubtitle, so enable here too.
+                player.setSubtitleEnable(true);
+            }
+        }
+        function applyPreference() {
+            // libmedia can restart its subtitle renderer when playing, seeking or changing tracks.
+            if (!disposed && !enabled) originalEnable.call(player, false);
+            // In 1.3.1, play() starts the renderer after firing 'played'. Stop it again afterwards.
+            Promise.resolve().then(() => {
+                if (!disposed && !enabled) originalEnable.call(player, false);
+            });
+            updateMenus();
+        }
+        const events = ['loaded', 'played', 'seeked', 'changed', 'streamUpdate'];
+        events.forEach(name => player.on(name, applyPreference));
+        container.addEventListener('click', onClick, true);
+        const observer = new MutationObserver(updateMenus);
+        observer.observe(container, {childList: true, subtree: true});
+        updateMenus();
+        return {
+            get enabled() { return enabled; },
+            dispose() {
+                if (disposed) return;
+                disposed = true;
+                observer.disconnect();
+                container.removeEventListener('click', onClick, true);
+                events.forEach(name => player.off(name, applyPreference));
+                for (const option of container.querySelectorAll('.player-subtitle-off-option')) option.remove();
+                container.classList.remove('player-subtitles-off');
+                player.setSubtitleEnable = originalEnable;
+            }
+        };
+    }
     global.FileRouterVideoPlayer = {
         async load(container, {url, assets, status, subtitlesApi, filePath}) {
             status.textContent = '正在加载视频…';
@@ -28,6 +94,8 @@
             await script(assets + 'player-bundle/avplayer.js');
             const player = new global.AVPlayer({
                 container,
+                // Include touch feedback overlays outside libmedia's inner UI in fullscreen.
+                fullscreenDom: container,
                 getWasm(type, codecId, mediaType) {
                     // Text subtitle decoders (including MP4 tx3g) are built into JS.
                     if (type === 'decoder' && mediaType === 3) return null;
@@ -51,9 +119,10 @@
             });
             player.on('error', () => { status.textContent = '视频播放失败，请刷新重试。'; });
             player.on('played', () => { status.textContent = ''; });
+            const subtitles = subtitleControls(container, player);
             const disposeTouch = global.FileRouterTouchControls ? global.FileRouterTouchControls(container, player) : () => {};
             const destroy = player.destroy.bind(player);
-            player.destroy = async () => { disposeTouch(); return destroy(); };
+            player.destroy = async () => { subtitles.dispose(); disposeTouch(); return destroy(); };
             global.addEventListener('pagehide', () => player.destroy(), { once: true });
             try {
                 await player.load(url);
@@ -78,12 +147,6 @@
                 // active WASM pipeline can wait indefinitely for buffered frames.
                 // Seeking before play uses the demuxer's Range-based initial seek.
                 const seek = player.seek.bind(player);
-                let subtitleEnabled = true;
-                const setSubtitleEnable = player.setSubtitleEnable.bind(player);
-                player.setSubtitleEnable = enabled => {
-                    subtitleEnabled = enabled;
-                    return setSubtitleEnable(enabled);
-                };
                 let reloading = false;
                 player.seek = async timestamp => {
                     if (reloading) return;
@@ -96,7 +159,6 @@
                     const subtitleIndex = subtitleStreams().findIndex(stream => stream.id === player.getSelectedSubtitleStreamId());
                     const audioStreams = player.getStreams().filter(stream => stream.mediaType === 'Audio');
                     const audioIndex = audioStreams.findIndex(stream => stream.id === player.getSelectedAudioStreamId());
-                    const enabled = subtitleEnabled;
                     status.textContent = '正在跳转…';
                     try {
                         await player.stop();
@@ -111,7 +173,7 @@
                                 if (audio && audio.id !== player.getSelectedAudioStreamId()) await player.selectAudio(audio.id);
                                 const subtitle = subtitleStreams()[subtitleIndex];
                                 if (subtitle && subtitle.id !== player.getSelectedSubtitleStreamId()) await player.selectSubtitle(subtitle.id);
-                                player.setSubtitleEnable(enabled);
+                                player.setSubtitleEnable(subtitles.enabled);
                                 if (paused) {
                                     const pauseAfterTime = () => {
                                         player.off('time', pauseAfterTime);

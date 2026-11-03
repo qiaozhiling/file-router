@@ -78,8 +78,8 @@ flowchart TD
 | `controller/FileController.java` | `/v1/**` 预览、`/v2/**` 旧链接重定向、`/media/**` 原始媒体 |
 | `service/DownService.java` | 识别视频扩展名、校验真实文件路径、选择页面或文件响应 |
 | `handler/NSRRH.java` | 从请求属性读取文件路径，交给资源处理器发送文件并支持 Range |
-| `templates/video.html`、`static/video-player.js` | 初始化播放器、音轨与字幕、跳转兼容、错误显示与销毁 |
-| `static/mobile-player-controls.js`、`static/mobile-player.css` | 手机布局、控制栏、双击跳转、长按倍速、设置弹窗 |
+| `templates/video.html`、`static/video-player.js` | 初始化播放器、完整区域全屏、音轨与字幕、字幕关闭状态、跳转兼容、错误显示与销毁 |
+| `static/mobile-player-controls.js`、`static/mobile-player.css` | 手机布局、控制栏、滑动进度、双击跳转、长按倍速、设置弹窗 |
 | `static/libmedia/` | 随应用发布的播放器、动态模块和 WASM 资源 |
 
 视频入口识别 MP4、MKV、WebM、M4V、MOV、AVI、RMVB。扩展名用于选择视频页面，不保证内部所有编码均可播放。图片、音频和 PDF 等由浏览器根据响应直接预览。
@@ -101,7 +101,9 @@ sequenceDiagram
 
 解码优先使用 MSE 原生路径，其次 WebCodecs，必要时使用 WASM。服务端不进行 FFmpeg 转码，也不生成 MP4 中间文件。视频响应使用 `Cache-Control: no-store`，页面退出时销毁播放器。
 
-手机交互包括左右双击快退/快进 2 秒、长按临时 2 倍速、控制栏自动隐藏。详细行为和解码限制见[视频与字幕专题](SUBTITLES.md)。
+手机交互包括横滑调进度、进度条轻点和拖动、左右双击快退/快进 2 秒、长按临时 2 倍速、控制栏自动隐藏。长按倍速生效后锁定本次触摸，移动手指不会切换为进度拖动，松手恢复原倍速。
+
+`fullscreenDom` 指向包含视频、控件和提示层的外层播放器，保证全屏时仍能显示倍速与进度提示。倍速提示背景为 50% 透明度，文字不透明。网页不提供竖滑调亮度或音量；部分浏览器可能另行提供原生视频手势。详细行为和解码限制见[视频与字幕专题](SUBTITLES.md)。
 
 ## 4. 字幕
 
@@ -111,7 +113,11 @@ sequenceDiagram
 | --- | --- |
 | `controller/SubtitleController.java` | 轨道元数据 JSON、WebVTT 响应、解析失败状态转换 |
 | `service/SubtitleService.java` | 路径校验、MP4 tx3g 提取、时间轴转换、文本转义、内存缓存 |
-| `static/video-player.js` | 检查播放器已有字幕轨道，必要时请求备用接口并加载 WebVTT |
+| `static/video-player.js` | 检查播放器已有字幕轨道，必要时加载备用 WebVTT；补充“不使用字幕”菜单项并维护字幕开关状态 |
+
+字幕开关在浏览器页面内维护，不新增后端接口或持久配置。选择“不使用字幕”停止字幕渲染，选择任一字幕轨道重新启用；播放、跳转或字幕列表更新后重新应用关闭状态。WASM 跳转重建播放器管线时，恢复音轨、字幕轨道和当前字幕开关状态。
+
+字幕菜单由上游 UI 动态生成，页面通过 `MutationObserver` 在菜单重建后补充关闭选项。libmedia 1.3.1 会在发出 `played` 事件后启动字幕渲染，因此事件处理还需在微任务中再次应用关闭状态。销毁播放器时清理监听、观察器和补充菜单项。
 
 Java 接口仅提取 MP4 tx3g 文本，支持时间轴编辑与 UTF-8/UTF-16 文本处理，不保留字体、颜色、位置或特效。MKV、ASS、图形字幕等能力由播放器模块决定。
 

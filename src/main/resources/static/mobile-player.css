@@ -6,7 +6,16 @@ body { margin: 16px; font-family: system-ui, sans-serif; background: #f5f6f8; }
 #video-player:fullscreen { width: 100%; height: 100%; max-width: none; margin: 0; }
 .player-speed-hint { position: absolute; z-index: 20; top: max(16px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); padding: 8px 16px; border-radius: 24px; color: white; background: #000b; font-size: 14px; pointer-events: none; display: none; }
 .player-speed-hint.visible { display: block; }
-#video-player.player-touch { touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.player-speed-hint:not(.player-seek-hint):not(.player-gesture-hint) { background: rgba(0, 0, 0, 0.5); }
+/* Set this before pointerdown, only on the picture so settings can still scroll. */
+#video-player .avplayer-ui-player, #video-player .avplayer-video, #video-player .avplayer-canvas, #video-player .avplayer-ui-progress-container { touch-action: none; }
+#video-player.player-touch { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.player-gesture-hint { top: 50%; transform: translate(-50%, -50%); white-space: pre-line; text-align: center; line-height: 1.6; }
+/* Let touches on the footer's empty gradient reach the picture underneath. */
+#video-player .avplayer-ui-footer { pointer-events: none; }
+#video-player .avplayer-ui-control, #video-player .avplayer-ui-progress-container { pointer-events: auto; }
+#video-player.player-seek-preview .avplayer-ui-progress-played { width: var(--player-seek-percent) !important; }
+#video-player.player-seek-preview .avplayer-ui-progress-indicator { left: var(--player-seek-percent) !important; }
 /* Touch visibility is independent of the desktop mousemove timer. */
 #video-player.player-touch .avplayer-ui-footer { transform: none; opacity: 1; visibility: visible; }
 #video-player.player-touch .avplayer-ui-footer .avplayer-ui-progress-container { transform: none; }
@@ -28,7 +37,7 @@ body { margin: 16px; font-family: system-ui, sans-serif; background: #f5f6f8; }
     #video-player .avplayer-ui-control-timer .avplayer-ui-time-div { margin: 0 3px; }
     #video-player .avplayer-ui-control-audio-track-value, #video-player .avplayer-ui-control-subtitle-track-value { max-width: 48px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     #video-player .avplayer-ui-control { font-size: 12px; }
-    #video-player .avplayer-ui-progress-container { padding-top: 12px; }
+    #video-player .avplayer-ui-progress-container { padding-top: 16px; padding-bottom: 12px; }
     #video-player .avplayer-ui-footer-right { min-width: 0; }
 }
 @media (max-width: 370px) {
@@ -41,3 +50,9 @@ body { margin: 16px; font-family: system-ui, sans-serif; background: #f5f6f8; }
 
 .player-seek-hint { top: 50%; left: auto; right: 8%; transform: translateY(-50%); }
 .player-seek-hint.seek-left { left: 8%; right: auto; }
+#video-player .player-subtitle-off-option { border: 0; border-radius: 0; background: transparent; color: inherit; font: inherit; }
+#video-player .player-subtitle-off-option.active { color: var(--libmedia-ui-theme); }
+#video-player .player-subtitle-off-option:hover, #video-player .player-subtitle-off-option:focus-visible { background: var(--libmedia-ui-widget-hover-background); }
+#video-player .player-subtitle-off-option:focus-visible { outline: 2px solid var(--libmedia-ui-theme); outline-offset: -2px; }
+#video-player.player-subtitles-off .avplayer-ui-control-subtitle-track .libmedia-ui-selector-item.active:not(.player-subtitle-off-option) { color: var(--libmedia-ui-font-color); }
+#video-player.player-subtitles-off .avplayer-ui-control-subtitle-track-value::after { content: '（关闭）'; }

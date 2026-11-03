@@ -6,11 +6,46 @@ const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../../main/resources/static/video-player.js'), 'utf8');
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
+function element(tag = 'div', classes = '') {
+    const attrs = new Map();
+    const node = {tagName:tag.toUpperCase(), className:classes, children:[], events:{}, parentElement:null,
+        setAttribute: (key,value) => attrs.set(key,value), getAttribute: key => attrs.get(key),
+        addEventListener(name,callback) { this.events[name]=callback; }, removeEventListener(name) { delete this.events[name]; },
+        appendChild(child) { child.parentElement=this; this.children.push(child); },
+        prepend(child) { child.parentElement=this; this.children.unshift(child); },
+        remove() { if (this.parentElement) this.parentElement.children=this.parentElement.children.filter(child=>child!==this); this.parentElement=null; },
+        closest(selector) { return this.classList.contains(selector.slice(1)) ? this : this.parentElement?.closest(selector) || null; },
+        querySelectorAll(selector) {
+            const parts=selector.split(' '), found=[];
+            const visit=child=>{
+                if (child.classList.contains(parts.at(-1).slice(1)) && (parts.length===1 || child.parentElement?.closest(parts[0]))) found.push(child);
+                child.children.forEach(visit);
+            };
+            this.children.forEach(visit); return found;
+        },
+        querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
+    };
+    node.classList={contains: name=>node.className.split(' ').includes(name),
+        toggle(name,on) { const classes=new Set(node.className.split(' ').filter(Boolean)); on ? classes.add(name) : classes.delete(name); node.className=[...classes].join(' '); },
+        remove(name) { this.toggle(name,false); }};
+    return node;
+}
+
 function fixture(options = {}) {
     let config, player, state = 4, destroyed = 0, selectedSubtitle = 11, selectedAudio = 1;
     const actions = [], requests = [], scripts = [], handlers = new Map(), lifecycle = {};
     let streams = options.streams || [{id: 1, mediaType: 'Audio'}, {id: 11, mediaType: 'Subtitle'}, {id: 12, mediaType: 'Subtitle'}];
-    let external = [];
+    let external = [], subtitleVisible = true, observer;
+    const status = {}, container = element(), subtitleControl=element('div','avplayer-ui-control-subtitle-track');
+    container.appendChild(subtitleControl);
+    function addMenu() {
+        const menu=element('div','libmedia-ui-selector');
+        menu.appendChild(element('div','libmedia-ui-selector-item active'));
+        menu.appendChild(element('div','libmedia-ui-selector-item'));
+        menu.appendChild(element('label','libmedia-ui-selector-item'));
+        subtitleControl.appendChild(menu); return menu;
+    }
+    const menu=addMenu();
     function emit(name) { for (const callback of [...(handlers.get(name) || [])]) callback(); }
     const window = {
         addEventListener: (name, callback) => { lifecycle[name] = callback; },
@@ -23,20 +58,22 @@ function fixture(options = {}) {
                 if (options.loadError) throw new Error('load failed');
                 state = 4; selectedSubtitle = 11; selectedAudio = 1;
                 external = value.externalSubtitles || [];
+                emit('loaded');
             };
             this.getStreams = () => streams;
             this.loadExternalSubtitle = async subtitle => {
                 external.push(subtitle);
                 streams = streams.concat({id: 11 + external.length, mediaType: 'Subtitle'});
                 actions.push(['external', subtitle]);
+                emit('streamUpdate');
             };
             this.getExternalSubtitle = () => external;
             this.getSelectedSubtitleStreamId = () => selectedSubtitle;
             this.getSelectedAudioStreamId = () => selectedAudio;
-            this.selectSubtitle = async id => { selectedSubtitle = id; actions.push(['subtitle', id]); };
+            this.selectSubtitle = async id => { selectedSubtitle = id; actions.push(['subtitle', id]); subtitleVisible=true; emit('changed'); };
             this.selectAudio = async id => { selectedAudio = id; actions.push(['audio', id]); };
-            this.setSubtitleEnable = enabled => actions.push(['subtitlesEnabled', enabled]);
-            this.seek = async timestamp => actions.push(['seek', timestamp]);
+            this.setSubtitleEnable = enabled => { subtitleVisible=enabled; actions.push(['subtitlesEnabled', enabled]); };
+            this.seek = async timestamp => { actions.push(['seek', timestamp]); subtitleVisible=true; emit('seeked'); };
             this.getStatus = () => state;
             this.isMSE = () => !!options.mse;
             this.getPlaybackRate = () => 1.5;
@@ -44,7 +81,7 @@ function fixture(options = {}) {
             this.setPlaybackRate = rate => actions.push(['rate', rate]);
             this.setVolume = volume => actions.push(['volume', volume]);
             this.stop = async () => { actions.push(['stop']); state = 0; };
-            this.play = async () => { actions.push(['play']); state = 6; emit('played'); emit('time'); };
+            this.play = async () => { actions.push(['play']); state = 6; emit('played'); subtitleVisible=true; emit('time'); };
             this.pause = () => { actions.push(['pause']); state = 8; };
             this.destroy = async () => { destroyed++; };
         }
@@ -53,16 +90,26 @@ function fixture(options = {}) {
         window, URLSearchParams,
         fetch: async url => { requests.push(url); return {ok: !options.subtitleError, json: async () => [{id: 4, label: '简体', language: 'chi'}]}; },
         document: {
-            createElement: () => ({}),
+            createElement: tag => element(tag),
             head: {appendChild(element) { scripts.push(element.src); queueMicrotask(() => options.scriptError ? element.onerror() : element.onload()); }}
+        },
+        MutationObserver: class {
+            constructor(callback) { observer=this; this.callback=callback; this.connected=false; }
+            observe() { this.connected=true; }
+            disconnect() { this.connected=false; }
         }
     });
-    const status = {};
     return {
         async load(filePath = '/test.mp4') {
-            return window.FileRouterVideoPlayer.load({}, {url: '/app/media' + filePath, assets: '/app/libmedia/', status, filePath, subtitlesApi: '/app/api/subtitles'});
+            return window.FileRouterVideoPlayer.load(container, {url: '/app/media' + filePath, assets: '/app/libmedia/', status, filePath, subtitlesApi: '/app/api/subtitles'});
         },
-        config: () => config, actions, requests, scripts, status, lifecycle, emit,
+        config: () => config, container, actions, requests, scripts, status, lifecycle, emit,
+        menu, addMenu, observer:()=>observer, subtitleVisible:()=>subtitleVisible,
+        click(item) {
+            let blocked=false;
+            container.events.click?.({target:item, preventDefault(){}, stopImmediatePropagation(){blocked=true;}});
+            return blocked;
+        },
         setState: value => { state = value; },
         choose: (audio, subtitle) => { selectedAudio = audio; selectedSubtitle = subtitle; },
         destroyed: () => destroyed
@@ -78,6 +125,12 @@ test('MP4 and MKV use the same player and prefer native MSE when codecs allow it
     }
 });
 
+test('fullscreen includes the outer player container that hosts touch feedback overlays', async () => {
+    const f = fixture(); await f.load();
+    assert.equal(f.config().container, f.container);
+    assert.equal(f.config().fullscreenDom, f.container);
+});
+
 test('WASM audio/video codecs are local, while text subtitle decoders remain built-in', async () => {
     const f = fixture(); await f.load();
     assert.equal(f.config().getWasm('decoder', 12, 0), '/app/libmedia/decode/mpeg4.wasm');
@@ -90,6 +143,47 @@ test('native subtitle streams are not duplicated by the Java fallback', async ()
     const f = fixture(); await f.load();
     assert.equal(f.requests.length, 0);
     assert.equal(f.actions.filter(a => a[0] === 'external').length, 0);
+});
+
+test('subtitle menu offers no subtitles, and choosing the current track enables them again', async () => {
+    const f=fixture(); await f.load();
+    const off=f.menu.querySelector('.player-subtitle-off-option');
+    assert.equal(off.textContent,'不使用字幕');
+    assert.equal(off.getAttribute('aria-pressed'),'false');
+    assert.equal(f.click(off),true);
+    assert.equal(f.subtitleVisible(),false);
+    assert.equal(f.container.classList.contains('player-subtitles-off'),true);
+    assert.equal(off.getAttribute('aria-pressed'),'true');
+    assert.equal(f.click(f.menu.children[1]),false);
+    assert.equal(f.subtitleVisible(),true);
+    assert.equal(f.container.classList.contains('player-subtitles-off'),false);
+    assert.equal(f.actions.filter(action=>action[0]==='subtitle').length,0);
+});
+
+test('MSE seek, replay and stream updates preserve the no-subtitles choice', async () => {
+    const f=fixture({mse:true}); const player=await f.load(); f.setState(6);
+    f.click(f.menu.querySelector('.player-subtitle-off-option'));
+    await player.seek(13000n); assert.equal(f.subtitleVisible(),false);
+    await player.play(); assert.equal(f.subtitleVisible(),false);
+    await player.selectSubtitle(12); assert.equal(f.subtitleVisible(),false);
+    f.emit('streamUpdate'); assert.equal(f.subtitleVisible(),false);
+    // The add-local-subtitles entry must not implicitly turn rendering back on.
+    f.click(f.menu.children.at(-1)); assert.equal(f.subtitleVisible(),false);
+    f.click(f.menu.children[2]); await player.selectSubtitle(11);
+    assert.equal(f.subtitleVisible(),true);
+});
+
+test('rebuilt subtitle menus receive one off option with the current state, and destruction cleans up', async () => {
+    const f=fixture(); const player=await f.load();
+    f.click(f.menu.querySelector('.player-subtitle-off-option'));
+    const rebuilt=f.addMenu(); f.observer().callback(); f.observer().callback();
+    assert.equal(rebuilt.querySelectorAll('.player-subtitle-off-option').length,1);
+    assert.equal(rebuilt.querySelector('.player-subtitle-off-option').getAttribute('aria-pressed'),'true');
+    await player.destroy();
+    assert.equal(f.observer().connected,false);
+    assert.equal(f.container.events.click,undefined);
+    assert.equal(f.container.querySelectorAll('.player-subtitle-off-option').length,0);
+    const count=f.actions.length; f.emit('seeked'); assert.equal(f.actions.length,count);
 });
 
 test('missing MP4 text streams use the existing Java reader and a WebVTT URL', async () => {
@@ -119,11 +213,12 @@ test('WASM seeking reloads the original URL and preserves audio, subtitle choice
     const player = await f.load('/test.mkv');
     f.setState(6); f.choose(2, 12); player.setSubtitleEnable(false); f.actions.length = 0;
     await player.seek(13000n); await flush();
-    assert.deepEqual(f.actions.slice(0, 4), [['stop'], ['load', '/app/media/test.mkv'], ['seek', 13000n], ['rate', 1.5]]);
+    assert.deepEqual(f.actions.filter(action=>action[0]!=='subtitlesEnabled').slice(0, 4), [['stop'], ['load', '/app/media/test.mkv'], ['seek', 13000n], ['rate', 1.5]]);
     assert.ok(f.actions.some(a => a[0] === 'volume' && a[1] === 0.4));
     assert.ok(f.actions.some(a => a[0] === 'audio' && a[1] === 2));
     assert.ok(f.actions.some(a => a[0] === 'subtitle' && a[1] === 12));
     assert.deepEqual(f.actions.at(-1), ['subtitlesEnabled', false]);
+    assert.equal(f.subtitleVisible(),false);
 });
 
 test('paused WASM seeking pauses again after the playback clock reaches the new position', async () => {
