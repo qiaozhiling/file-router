@@ -1,5 +1,7 @@
 # 统一视频播放与字幕
 
+[项目首页](../README.md) · [模块与架构](MODULES.md) · [接口说明](API.md) · [运行与维护](OPERATIONS.md)
+
 文件列表点击 **观看**，所有视频进入 `/v1/文件路径` 的同一个 libmedia AVPlayerUI 1.3.1
 播放器，包括 MP4、MKV、WebM、M4V、MOV、AVI、RMVB。播放、拖动、音轨、字幕、倍速和全屏
 使用同一套控件。旧 `/v2/` 链接继续跳转到 `/v1/`。
@@ -19,7 +21,7 @@ JAR 只通过 `/media/文件路径` 发送原始文件，支持 HTTP Range。播
 及浏览器能力选择解码路径，不按扩展名拆成两个播放器：优先 MSE 原生解码，其次 WebCodecs，
 必要时使用 WASM 软件解码。MSE 兼容的 MKV 也可以使用原生解码，不强制所有 MKV 软件解码。
 
-无后端 FFmpeg 转码、MP4 中间文件或持久视频缓存。视频与字幕响应设置 `Cache-Control: no-store`，
+无后端 FFmpeg 转码、MP4 中间文件或持久视频缓存。视频与 WebVTT 字幕响应设置 `Cache-Control: no-store`，
 播放过程只使用内存缓冲。退出页面销毁播放器。没有 Service Worker、Cache API、IndexedDB
 或文件系统媒体存储。播放器脚本、动态模块和 WASM 都在 JAR 内，由本地应用提供。
 

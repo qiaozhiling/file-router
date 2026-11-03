@@ -1,5 +1,7 @@
 # 前端资源
 
+[项目首页](../README.md) · [模块与架构](MODULES.md) · [接口说明](API.md) · [运行与维护](OPERATIONS.md)
+
 上传页和剪贴板页使用原生 JavaScript，不再依赖 jQuery、WebUploader 或 Flash。
 播放器和本地 libmedia 解码资源继续使用现有实现。
 
