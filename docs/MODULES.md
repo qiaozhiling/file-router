@@ -6,6 +6,8 @@
 
 这是一个服务端渲染页面的单体应用。后端处理请求、读写本地文件；浏览器负责上传队列、播放解码和交互。没有独立的前端开发服务器。
 
+可选 Python 发现服务部署在公网，保存 JAR 主动上报的地址列表。手机先访问该固定入口，再通过链接直接连接 JAR；Python 不参与文件或视频传输。
+
 ```mermaid
 flowchart TD
     Browser[浏览器] --> Controller[Controller 路由层]
@@ -157,6 +159,23 @@ WebVTT 响应设置 `no-store` 和 `nosniff`；轨道列表接口没有显式设
 
 `FileUtil` 在初始化时生成共享路径；不是动态配置中心。启动日志中的 IP 来自网卡遍历和简单过滤，多网卡情况下应核对实际可访问地址。
 
+## 7. 可选公网服务发现
+
+| 文件 | 职责 |
+| --- | --- |
+| `discovery/DiscoveryProperties.java` | 绑定公网 URL、心跳秒数、可选手动地址；拒绝零间隔 |
+| `discovery/LocalServiceAddress.java` | 收集多块活动网卡 IPv4，过滤和去重，组合实际端口和上下文路径 |
+| `discovery/DiscoveryReporter.java` | 应用就绪后启动单后台线程，本地检查、心跳、变化上报、超时重试和退出清理 |
+| 仓库根目录 `discovery-server/server.py` | 独立 Python 服务，接收上报、原子保存 JSON、提供手机入口页面 |
+| 仓库根目录 `discovery-server/requirements.txt` | Python 运行依赖；部署目录仅包含它与 `server.py` |
+| 仓库根目录 `src/test/python/` | 发现服务自动化测试与测试依赖，不随部署包分发 |
+
+使用说明统一位于 `docs/DISCOVERY.md`，部署目录不再放置 README、测试或开发依赖文件。
+
+JAR 通过 Java 11 HttpClient 一次发送 `addresses` 列表、兼容旧服务的首个 `address` 和 `reportIntervalSeconds`。公网端添加自己的接收时间；页面为每个地址提供按钮，超时阈值为 `max(900 秒, 上报间隔 × 3)`。文件和媒体仍由手机直接请求 JAR，公网端不做转发和网络探测。地址增加、减少或改变时提前上报，排序变化不额外触发；Python 兼容旧单地址协议和 JSON 文件。
+
+空服务 URL 或负间隔关闭所有上报；正间隔下启动即上报，之后检查本地 IP 并按需发送。没有设备 ID 和鉴权，单服务最新记录覆盖旧记录。运行参数和部署见[公网服务发现](DISCOVERY.md)。
+
 ## 维护与扩展位置
 
 | 变更 | 通常涉及的位置 | 配套验证 |
@@ -167,5 +186,6 @@ WebVTT 响应设置 `no-store` 和 `nosniff`；轨道列表接口没有显式设
 | 修改播放与手机交互 | `video-player.js`、`mobile-player-controls.js`、对应样式 | 播放器与手机控件 JS 测试、真实浏览器回归 |
 | 修改字幕解析 | `SubtitleService`、`SubtitleController` | `SubtitleServiceTest` |
 | 完善剪贴板写入 | `ClickBoardService`、`clipboard.js` | 前端请求测试与服务器桌面环境实测 |
+| 修改地址发现与登记协议 | `discovery/`、`discovery-server/server.py` | `DiscoveryReporterTest`、`src/test/python/test_discovery_server.py`，同步 `DISCOVERY.md` |
 
 变更后同步更新[接口说明](API.md)、[运行与维护](OPERATIONS.md)及相关专题，避免页面提示、接口契约与实际完成状态不一致。

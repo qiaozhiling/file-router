@@ -2,7 +2,7 @@
 
 File Router 是一个面向局域网文件共享的 Java Web 应用，可通过浏览器浏览和下载服务器文件、上传文件、预览媒体，以及查看服务器系统剪贴板。视频在浏览器中解码播放，服务端提供原始文件和 MP4 文本字幕备用接口。
 
-项目采用单个 Maven 工程；下文的“模块”指业务功能划分，并非独立部署服务或 Maven 子模块。实现说明以当前源码为准。
+Java 应用采用单个 Maven 工程；下文的“模块”指业务功能划分，并非 Maven 子模块。可选的 Python 公网发现服务独立部署。实现说明以当前源码为准。
 
 ## 功能概览
 
@@ -14,6 +14,7 @@ File Router 是一个面向局域网文件共享的 Java Web 应用，可通过�
 | 字幕 | 播放器内封字幕、本机字幕文件、Java MP4 tx3g 转 WebVTT 备用接口 | `/api/subtitles` |
 | 剪贴板 | 读取服务器剪贴板文本或图片，将显示的文本复制到访问者剪贴板 | `/c`、`/cbpn` |
 | 配置与公共组件 | 文件根目录与临时路径管理、启动日志、文件响应、上传合并任务 | `common`、`utils`、`handler` |
+| 可选公网服务发现 | JAR 上报 Wi-Fi、以太网等多个地址，固定网页提供直达入口，JSON 保存单服务状态 | `discovery`、`discovery-server/` |
 
 注意：`POST /uptext` 当前只将收到的文本写入服务器日志，尚未写入服务器系统剪贴板。上传请求返回也不代表后台分片合并已经成功。
 
@@ -24,6 +25,7 @@ File Router 是一个面向局域网文件共享的 Java Web 应用，可通过�
 - [运行与维护](docs/OPERATIONS.md)：启动、配置、存储、Docker 现状、测试、故障排查和已知限制。
 - [前端专题](docs/FRONTEND.md)：原生 JavaScript 上传、复制与目录导航行为。
 - [视频与字幕专题](docs/SUBTITLES.md)：播放器、解码、字幕、缓存和手机操作。
+- [公网服务发现](docs/DISCOVERY.md)：Python 服务部署、JAR 上报参数、JSON 状态与跨网段访问。
 
 ## 技术组成
 
@@ -35,6 +37,7 @@ File Router 是一个面向局域网文件共享的 Java Web 应用，可通过�
 | 原生 JavaScript / CSS | 页面交互，无独立前端打包工程 |
 | libmedia AVPlayerUI | 1.3.1，播放器和本地 WASM 解码资源 |
 | mp4parser | `muxer` 1.9.56，用于 MP4 tx3g 字幕提取 |
+| 可选 Python 发现服务 | Python 3.10+；FastAPI 0.162.0、Pydantic 2.14.2、Uvicorn 0.54.0，独立于 JAR 安装 |
 
 当前没有数据库、Redis、消息队列或对象存储依赖。文件保存在本地文件系统，上传任务和字幕缓存保存在进程内存中。
 
@@ -57,6 +60,10 @@ java -jar target/file-router-0.0.1-SNAPSHOT.jar --file.basePath=D:/Downloads --s
 
 局域网设备使用服务器实际 IP 替换 `localhost`。上传默认落到 `D:/Downloads/uploads`。更多参数与环境要求见[运行与维护](docs/OPERATIONS.md)。
 
+需要固定入口时，可在公网服务器运行 [`discovery-server/server.py`](discovery-server/server.py)，然后给 JAR 添加 `--discovery.server-url=https://你的入口域名`。默认每 300 秒上报，IP 变化提前上报；`--discovery.report-interval-seconds=-1` 关闭全部上报。该功能默认不启用，不代理文件和视频。
+
+Python 部署只需 `server.py` 和 `requirements.txt`；虚拟环境、SSH 后台运行及双网卡升级步骤见[公网服务发现](docs/DISCOVERY.md)。说明与测试保留在仓库，不放入部署包。
+
 当前没有应用级登录和权限隔离，适用范围应限定在可信访问环境；具体实现限制见[已知限制](docs/OPERATIONS.md#已知限制)。
 
 ## 仓库结构
@@ -66,9 +73,11 @@ file-router/
 ├── pom.xml                     Maven 依赖和构建配置
 ├── Dockerfile                  现有容器构建入口
 ├── docs/                       模块、接口、运行维护文档
+├── discovery-server/           可选 Python 公网入口程序与依赖（两个文件）
 ├── src/main/java/com/example/filerouter/
 │   ├── FileRouterApplication.java
 │   ├── controller/             页面路由与接口
+│   ├── discovery/              可选 HTTP 地址上报、网卡检测
 │   ├── service/                文件、上传、剪贴板、字幕业务
 │   ├── common/                 配置、启动日志、分片合并任务
 │   ├── handler/                文件资源响应处理器
@@ -79,7 +88,8 @@ file-router/
 │   └── static/                 JavaScript、CSS、图片和 libmedia 资源
 └── src/test/
     ├── java/                   后端自动化测试及历史实验程序
-    └── js/                     前端 Node.js 测试
+    ├── js/                     前端 Node.js 测试
+    └── python/                 公网发现服务测试与测试依赖
 ```
 
 ## 还可以补充哪些文档

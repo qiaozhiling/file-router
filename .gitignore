@@ -34,3 +34,9 @@ build/
 
 mvnw
 mvnw.cmd
+
+### Python discovery service runtime ###
+__pycache__/
+.venv/
+/discovery-server/devices.json
+/discovery-server/devices.json.*.tmp

@@ -13,6 +13,13 @@ spring:
 server:
   port: 8081
 
+# Optional public discovery service. Empty URL or any negative interval disables all reporting.
+discovery:
+  server-url: ""
+  report-interval-seconds: 300
+  # Optional single URL override (VPN/public IP/domain). Empty reports all ordinary active IPv4 addresses.
+  address: ""
+
 #logging:
 #  level:
 #    com.example.filerouter.controller: debug

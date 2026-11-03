@@ -38,6 +38,9 @@ java -jar target/file-router-0.0.1-SNAPSHOT.jar '--file.basePath=D:/Shared Files
 | `file.tempDir` | `/temp` | 与上传目录拼接的临时目录后缀 |
 | `file.clickBoardPicName` | `cbpn` | 剪贴板临时图片的文件名，无扩展名 |
 | `server.port` | `8081` | 本地默认监听端口 |
+| `discovery.server-url` | 空 | Python 公网发现服务根 URL；空则不启用上报 |
+| `discovery.report-interval-seconds` | `300` | 正数为心跳秒数，负数关闭全部上报，`0` 为配置错误 |
+| `discovery.address` | 空 | 可选手动覆盖为一个访问地址；默认收集多块活动网卡 IPv4、实际端口和上下文路径 |
 | `spring.thymeleaf.cache` | `false` | 关闭模板缓存 |
 | `spring.mvc.hiddenmethod.filter.enabled` | `true` | 启用隐藏 HTTP 方法过滤器 |
 
@@ -76,6 +79,12 @@ java -jar target/file-router-0.0.1-SNAPSHOT.jar --spring.servlet.multipart.max-f
 
 配置说明通过 Context7 核对了 Spring Boot 2.5.x 官方资料；可检索版本为 2.5.3 / 2.5.5，项目实际依赖仍为 2.5.7。参考：[外部化配置](https://github.com/spring-projects/spring-boot/blob/v2.5.5/spring-boot-project/spring-boot-docs/src/docs/asciidoc/features/external-config.adoc)、[2.5.3 参考文档](https://docs.spring.io/spring-boot/docs/2.5.3/reference/htmlsingle)。
 
+## 可选公网服务发现
+
+如需公网固定入口，请先按[公网服务发现部署说明](DISCOVERY.md)部署 Python 服务，再配置 JAR。启动时立即后台上报多个活动网卡地址，列表变化在最多 30 秒的本地检查后上报，未变化时按心跳间隔上报；失败不影响文件共享。默认关闭，不使用 mDNS，不生成设备 ID，也不要求密钥。公网端使用一个 worker，以 `devices.json` 保存最新地址列表，能调用上报接口的人均可覆盖记录。单地址版升级后需同时替换公网 `server.py` 并重启，旧 JSON 无需删除。
+
+Python 部署目录与压缩包仅包含 `server.py`、`requirements.txt`；说明集中在 `docs/DISCOVERY.md`，测试位于 `src/test/python/`。虚拟环境、SSH 后台运行、Windows JAR 批处理和单地址版本升级步骤均见该专题。
+
 ## Docker 现状
 
 现有 [`Dockerfile`](../Dockerfile) 使用 `openjdk:15-jdk-alpine`，将构建上下文根目录的 `*.jar` 复制为 `/app.jar`。因此它不是直接从源码编译的多阶段构建；仅执行 `mvn package` 会把 JAR 放在 `target/`，不能自动满足根目录 `COPY *.jar` 的条件。构建上下文中应只有一个待复制的应用 JAR。
@@ -101,6 +110,7 @@ java -jar target/file-router-0.0.1-SNAPSHOT.jar --spring.servlet.multipart.max-f
 | 剪贴板图片 | `tempPath/cbpn` | 输出图片后尝试删除，共用一个文件名 |
 | 浏览器播放缓冲 | 浏览器内存 | 页面退出销毁播放器，无应用级持久媒体缓存 |
 | 字幕开关与当前轨道选择 | 浏览器当前播放器 | 当前页面的播放和跳转后保持；重新加载页面恢复默认选择 |
+| 公网发现记录 | Python 服务脚本旁的 `devices.json`，可配置其他路径 | 持久保存最新地址列表、服务器接收时间和心跳间隔；重启加载 |
 
 备份应覆盖需保留的共享文件和上传结果。清理临时分片前先停止相关上传并确认没有合并任务使用它们；当前没有独立任务查询或可靠的启动恢复清理机制。
 
@@ -111,6 +121,15 @@ java -jar target/file-router-0.0.1-SNAPSHOT.jar --spring.servlet.multipart.max-f
 ```powershell
 mvn test
 ```
+
+可选 Python 发现服务的测试需单独执行，Maven 不会自动运行。先安装 Python 3.10+ 和测试依赖，在仓库根目录执行：
+
+```powershell
+python -m pip install -r src/test/python/requirements.txt
+python -B -m unittest discover -s src/test/python -p test_discovery_server.py -v
+```
+
+`-B` 避免测试导入时在部署目录生成 `__pycache__`；测试数据写入临时目录，不覆盖实际 `devices.json`。
 
 前端测试使用 Node.js 自带测试运行器，无 npm 安装步骤。下面沿用仓库专题文档的命令，需要支持 `--test-isolation=none` 且提供测试所需 `File` 等 Web API 的 Node.js 版本：
 
@@ -123,6 +142,8 @@ node --test --test-isolation=none src/test/js/file-browser.test.cjs src/test/js/
 | `FileBrowsingTest` | 根目录、嵌套目录、面包屑、文件显示名和相对链接 |
 | `PreviewRoutingTest` | 统一视频入口、原始媒体与 Range、旧链接、越界路径 |
 | `SubtitleServiceTest` | 时间轴、编码、文本转义、双轨、缓存失效、字幕接口与路径校验 |
+| `DiscoveryReporterTest` | 上报配置、负数关闭、多网卡地址增减与去重、心跳时机、失败重试和实际 HTTP 协议 |
+| `test_discovery_server.py` | 多地址展示、旧格式兼容、重启恢复、状态超时、输入校验、并发保存和写盘失败 |
 | `file-browser.test.cjs` | 手机路径展开、路径复制与备用方式 |
 | `native-upload.test.cjs` | 分片字节、首尾顺序、并发、重试、取消、队列行为 |
 | `native-clipboard.test.cjs` | 表单编码、错误处理、复制备用方式 |
@@ -145,6 +166,11 @@ node --test --test-isolation=none src/test/js/file-browser.test.cjs src/test/js/
 | 现象 | 排查方向 |
 | --- | --- |
 | 局域网设备无法访问 | 实际 IP、监听端口、防火墙、网络隔离；多网卡时不要只依赖启动日志里的 IP |
+| 公网入口未收到上报 | `discovery.server-url` 是否为空、间隔是否为负数；检查 JAR 上报日志、Python 端口及反向代理配置 |
+| 双网卡仍只显示一个地址 | 两端是否都已更新并重启、`discovery.address` 是否手动覆盖、`server.address` 是否只监听一个 IP；核对 `Discovery addresses reported` 日志并刷新入口页 |
+| 上报返回 307/308 或 404 | 使用最终入口根 URL，不要附加 `/api/heartbeat`；检查 HTTPS 跳转及代理子路径，客户端不跟随重定向 |
+| 上报返回 503 | 检查 Python 数据目录写权限、磁盘空间和保存异常日志；原记录不会被失败写入替换 |
+| 公网入口显示在线但链接打不开 | 状态只表示最近收到上报；选择手机当前网络能访问的地址，入口服务不提供内网穿透 |
 | 列表为空或显示 404 页面 | 根目录是否存在、目录权限、URL 相对路径、是否启动了预期 JAR |
 | 上传请求被拒绝 | multipart 限制、代理限制、分片大小和表单字段 |
 | 页面提示完成但文件不完整 | 后台合并是否完成、`check ok` / `check fail` 日志、磁盘空间、同名任务冲突 |
