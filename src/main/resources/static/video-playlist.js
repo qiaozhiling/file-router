@@ -3,7 +3,7 @@
     global.FileRouterPlaylist = function (container, navigation, player, {episodes, filePath, mediaBase, previewBase, status}) {
         let index = episodes.findIndex(item => item.path === filePath);
         if (index < 0) return () => {};
-        let busy = false, disposed = false, returnFocus, toolbarTimer;
+        let busy = false, disposed = false, returnFocus;
         const listeners = [], controls = [];
         function listen(target, name, callback, options) {
             target.addEventListener(name, callback, options);
@@ -20,8 +20,6 @@
         const position = node('p', 'episode-position');
         const actions = node('div', 'episode-actions');
         navigation.append(heading, position, actions);
-        const toolbar = node('div', 'player-episode-toolbar');
-        toolbar.setAttribute('aria-label', '全屏选集');
         const message = node('div', 'player-episode-message');
         message.setAttribute('role', 'status');
         const overlay = node('div', 'player-episode-overlay');
@@ -39,34 +37,33 @@
         const list = node('div', 'episode-list');
         panel.append(panelHeader, list);
         overlay.append(panel);
-        container.append(toolbar, overlay, message);
-        function showToolbar() {
-            clearTimeout(toolbarTimer);
-            container.classList.remove('player-toolbar-hidden');
-            if (player.getStatus() === 6 && overlay.hidden) {
-                toolbarTimer = setTimeout(() => container.classList.add('player-toolbar-hidden'), 3500);
-            }
-        }
+        container.append(overlay, message);
         function dismiss() {
             if (overlay.hidden) return;
             overlay.hidden = true;
             container.classList.remove('player-episodes-open');
             returnFocus?.focus({preventScroll: true});
-            showToolbar();
         }
         function open(trigger) {
             returnFocus = trigger;
             overlay.hidden = false;
             container.classList.add('player-episodes-open');
-            clearTimeout(toolbarTimer);
             rows[index].scrollIntoView({block: 'nearest'});
             rows[index].focus({preventScroll: true});
         }
-        function addControls(parent) {
-            for (const [action, label] of [['previous', '上一集'], ['next', '下一集'], ['list', '选集']]) {
-                const button = node('button', 'episode-action episode-' + action, label);
+        function addControls(parent, definitions, embedded = false) {
+            for (const [action, label] of definitions) {
+                const button = node('button', 'episode-action ' + (embedded ? 'player-episode-control player-episode-' : 'episode-') + action, label);
                 button.type = 'button';
                 button.dataset.action = action;
+                button.setAttribute('aria-label', label);
+                if (embedded) {
+                    listen(button, 'click', event => { event.preventDefault(); event.stopPropagation(); });
+                    if (action === 'next' || action === 'previous') {
+                        const path = action === 'next' ? 'M6 5v14l10-7zM18 5h2v14h-2z' : 'M18 5v14L8 12zM4 5h2v14H4z';
+                        button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="' + path + '"/></svg>';
+                    }
+                }
                 if (action === 'list') {
                     button.setAttribute('aria-haspopup', 'dialog');
                     listen(button, 'click', () => open(button));
@@ -77,8 +74,33 @@
                 parent.append(button);
             }
         }
-        addControls(actions);
-        addControls(toolbar);
+        addControls(actions, [['previous', '上一集'], ['next', '下一集'], ['list', '选集']]);
+        const previousSlot = node('div', 'avplayer-ui-control-item player-episode-control-slot');
+        const nextSlot = node('div', 'avplayer-ui-control-item player-episode-control-slot');
+        const listSlot = node('div', 'avplayer-ui-control-item player-episode-control-slot');
+        addControls(previousSlot, [['previous', '上一集']], true);
+        addControls(nextSlot, [['next', '下一集']], true);
+        addControls(listSlot, [['list', '选集']], true);
+        // libmedia 1.3.1 owns and can rebuild its footer. Reuse our controls when
+        // that happens, without editing the vendored player or duplicating listeners.
+        function mountControls() {
+            if (disposed) return;
+            const left = container.querySelector('.avplayer-ui-footer-left');
+            const right = container.querySelector('.avplayer-ui-footer-right');
+            if (left && (previousSlot.parentElement !== left || nextSlot.parentElement !== left)) {
+                const play = left.querySelector('.avplayer-ui-control-play')?.closest('.avplayer-ui-control-item');
+                if (play) { play.before(previousSlot); play.after(nextSlot); }
+                else { left.prepend(nextSlot); left.prepend(previousSlot); }
+            }
+            if (right && listSlot.parentElement !== right) {
+                const settings = right.querySelector('.avplayer-ui-control-settings, .avplayer-ui-control-fullscreen')?.closest('.avplayer-ui-control-item');
+                if (settings) settings.before(listSlot);
+                else right.append(listSlot);
+            }
+        }
+        const footerObserver = new MutationObserver(mountControls);
+        footerObserver.observe(container, {childList: true, subtree: true});
+        mountControls();
         const rows = episodes.map((episode, i) => {
             const button = node('button', 'episode-row');
             button.type = 'button';
@@ -98,7 +120,10 @@
                 button.disabled = busy || (action === 'previous' && index === 0) || (action === 'next' && index === episodes.length - 1);
                 if (action === 'previous' || action === 'next') {
                     const episode = episodes[index + (action === 'next' ? 1 : -1)];
-                    button.title = episode ? episode.name : action === 'next' ? '已是最后一集' : '已是第一集';
+                    const label = action === 'next' ? '下一集' : '上一集';
+                    button.title = episode ? (button.classList.contains('player-episode-control') ? label + '：' : '') + episode.name : action === 'next' ? '已是最后一集' : '已是第一集';
+                } else {
+                    button.title = '选集';
                 }
             }
             rows.forEach((row, i) => {
@@ -124,12 +149,11 @@
                 if (!disposed) status.textContent = error.message;
             } finally {
                 busy = false;
-                if (!disposed) { message.textContent = status.textContent; update(); showToolbar(); }
+                if (!disposed) { message.textContent = status.textContent; update(); }
             }
         }
         listen(close, 'click', dismiss);
         listen(overlay, 'click', event => { if (event.target === overlay) dismiss(); event.stopPropagation(); });
-        listen(toolbar, 'click', event => event.stopPropagation());
         // Keep keyboard shortcuts behind the modal from seeking or pausing playback.
         listen(document, 'keydown', event => {
             if (overlay.hidden) return;
@@ -142,22 +166,18 @@
                 event.preventDefault(); focusable[next].focus();
             }
         }, true);
-        listen(container, 'pointermove', event => { if (event.pointerType === 'mouse') showToolbar(); });
-        listen(container, 'focusin', showToolbar);
         listen(document, 'fullscreenchange', dismiss);
-        const onPlayed = () => { message.textContent = ''; showToolbar(); };
-        const onPaused = () => { clearTimeout(toolbarTimer); container.classList.remove('player-toolbar-hidden'); };
+        const onPlayed = () => { message.textContent = ''; };
         player.on('played', onPlayed);
-        player.on('paused', onPaused);
         document.title = episodes[index].name + ' · 视频播放';
-        update(); showToolbar();
+        update();
         return () => {
             disposed = true;
-            clearTimeout(toolbarTimer);
+            footerObserver.disconnect();
             listeners.forEach(remove => remove());
-            player.off('played', onPlayed); player.off('paused', onPaused);
-            toolbar.remove(); overlay.remove(); message.remove(); navigation.replaceChildren();
-            container.classList.remove('player-episodes-open', 'player-toolbar-hidden');
+            player.off('played', onPlayed);
+            previousSlot.remove(); nextSlot.remove(); listSlot.remove(); overlay.remove(); message.remove(); navigation.replaceChildren();
+            container.classList.remove('player-episodes-open');
         };
     };
 })(window);

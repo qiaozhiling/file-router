@@ -9,6 +9,7 @@
 - `src/main/resources/static/upload.js`：批量队列、删除、上传进度、失败重传。
 - `src/main/resources/static/clipboard.js`：异步提交文本与复制，兼容局域网 HTTP 的复制备用方式。
 - `src/main/resources/static/video-player.js`：播放器接入、完整区域全屏、“不使用字幕”菜单及字幕状态、跳转兼容与销毁。
+- `src/main/resources/static/video-playlist.js`：同目录选集与前后集切换，将入口挂载到播放器底栏，控件重建后自动恢复。
 - `src/main/resources/static/mobile-player-controls.js`：手机单击、双击跳转、长按倍速、横滑与进度条拖动。
 - `src/main/resources/static/mobile-player.css`：手机布局、提示层、字幕关闭状态和进度预览样式。
 
