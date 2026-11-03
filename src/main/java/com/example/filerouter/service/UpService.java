@@ -5,54 +5,80 @@ import com.example.filerouter.utils.FileUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.PreDestroy;
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-
 @Service
 public class UpService extends RootService {
+    private final ExecutorService pool;
+    private final ConcurrentMap<String, AccompanyThread> uploadingFileMap = new ConcurrentHashMap<>();
 
-    private final ExecutorService pool = Executors.newFixedThreadPool(20);
+    public UpService() {
+        this(Executors.newFixedThreadPool(20));
+    }
 
-    private final HashMap<String, AccompanyThread> uploadingFileMap = new HashMap<>();
+    UpService(ExecutorService pool) {
+        this.pool = pool;
+    }
 
-    public void upload(Integer chunks, Integer chunk, String name, MultipartFile file) {
+    public String upload(Integer chunks, Integer chunk, String name, MultipartFile file) throws IOException {
+        if (name == null || name.isBlank() || file == null) {
+            throw new IllegalArgumentException("请选择要上传的文件。");
+        }
         try {
-            if (chunk == null) { // only one clip
+            if (chunk == null) {
                 File target = new File(FileUtil.uploadPath + "/" + name);
                 FileUtil.checkDir(target);
                 file.transferTo(target);
-                logger.info("check ok " + chunks + " : " + name);
-            } else { // more clips
-                logger.debug("chunk arrived : " + chunk + " : " + name);
-                File tempFile = new File(FileUtil.getTempFilePath(chunk, chunks, name));
-                FileUtil.checkDir(tempFile);
-                file.transferTo(tempFile);
-                AccompanyThread mergeThread;
+                if (!target.isFile() || target.length() != file.getSize()) {
+                    throw new IOException("保存后的文件大小不匹配。");
+                }
+                return "completed";
+            }
+            if (chunks == null || chunks < 2 || chunk < 0 || chunk >= chunks) {
+                throw new IllegalArgumentException("上传分片参数无效。");
+            }
+            AccompanyThread task = uploadingFileMap.get(name);
+            if (task == null && chunk != 0) throw new IOException("上传任务已失效，请重新上传。");
+            if (task != null) task.checkActive(chunks);
+            File part = new File(FileUtil.getTempFilePath(chunk, chunks, name));
+            FileUtil.checkDir(part);
+            file.transferTo(part);
+            if (!part.isFile() || part.length() != file.getSize()) {
+                throw new IOException("保存后的分片大小不匹配。");
+            }
+            if (chunk == 0) {
                 synchronized (this) {
-                    mergeThread = uploadingFileMap.get(name);
-                    if (mergeThread == null) {
-                        mergeThread = new AccompanyThread(chunks, name, uploadingFileMap);
-                        uploadingFileMap.put(name, mergeThread);
+                    task = uploadingFileMap.get(name);
+                    if (task == null) {
+                        task = new AccompanyThread(chunks, name, uploadingFileMap);
+                        uploadingFileMap.put(name, task);
+                        pool.submit(task);
+                    } else {
+                        task.feed();
                     }
                 }
-                if (chunk == 0) { // first clip
-                    logger.info("start " + chunks + " clips: " + name);
-                    pool.submit(mergeThread);
-                } else if (chunk == chunks - 1) { // last clip
-                    logger.info("start merge : " + name);
-                    mergeThread.over();
-                } else {
-                    logger.debug("size of map : " + uploadingFileMap.size());
-                    mergeThread.feed();
-                    logger.debug("feed " + chunk + " : " + name);
-                }
+            } else if (chunk == chunks - 1) {
+                task.over();
+                task.awaitCompletion();
+                return "completed";
+            } else {
+                task.feed();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+            return "chunk_received";
+        } catch (IOException error) {
+            logger.error("Unable to save upload: " + name, error);
+            throw error;
         }
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        pool.shutdownNow();
     }
 }

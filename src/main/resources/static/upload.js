@@ -2,7 +2,7 @@
     'use strict';
     const CHUNK_SIZE = 1024 * 1024;
     function abortError() { const error = new Error('上传已取消'); error.name = 'AbortError'; return error; }
-    function send(url, form, progress, signal) {
+    function send(url, form, progress, signal, expectedStatus) {
         return new Promise((resolve, reject) => {
             if (signal?.aborted) { reject(abortError()); return; }
             const xhr = new XMLHttpRequest();
@@ -11,11 +11,28 @@
             xhr.open('POST', url);
             xhr.timeout = 120000;
             xhr.upload.onprogress = event => { if (event.lengthComputable) progress(event.loaded / event.total); };
+            xhr.upload.onload = () => progress(1);
             xhr.onload = finish(() => {
-                if (xhr.status >= 200 && xhr.status < 300) resolve();
-                else { const error = new Error('上传失败（HTTP ' + xhr.status + '）'); error.retryable = xhr.status === 408 || xhr.status === 429 || xhr.status >= 500; reject(error); }
+                let result;
+                try { result = JSON.parse(xhr.responseText); } catch (_) { /* A missing receipt is not success. */ }
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    if (result?.status === expectedStatus) resolve();
+                    else reject(new Error('服务器未确认文件保存成功，请检查服务器文件后重试。'));
+                } else {
+                    const error = new Error(result?.message || '上传失败（HTTP ' + xhr.status + '）');
+                    error.retryable = expectedStatus !== 'completed' && result?.status !== 'failed'
+                        && (xhr.status === 408 || xhr.status === 429 || xhr.status >= 500);
+                    reject(error);
+                }
             });
-            const networkError = () => { const error = new Error('网络异常，请检查连接后重试'); error.retryable = true; return error; };
+            // A lost final response may follow a successful merge. Do not blindly send it again.
+            const networkError = () => {
+                const error = new Error(expectedStatus === 'completed'
+                    ? '未能确认文件保存完成，请检查连接和服务器文件后重试。'
+                    : '网络异常，请检查连接后重试');
+                error.retryable = expectedStatus !== 'completed';
+                return error;
+            };
             xhr.onerror = finish(() => reject(networkError()));
             xhr.ontimeout = finish(() => reject(networkError()));
             xhr.onabort = finish(() => reject(abortError()));
@@ -39,7 +56,8 @@
                 form.append('file', file.slice(start, end), file.name);
                 loaded.set(index, 0);
                 try {
-                    await send(url, form, fraction => { loaded.set(index, (end - start) * fraction); report(); }, signal);
+                    const expectedStatus = index === chunks - 1 ? 'completed' : 'chunk_received';
+                    await send(url, form, fraction => { loaded.set(index, (end - start) * fraction); report(); }, signal, expectedStatus);
                     loaded.delete(index); completed += end - start; report(); return;
                 } catch (error) {
                     loaded.delete(index); report();
@@ -95,12 +113,14 @@
         const msg = document.createElement('div'); msg.className = 'msg';
         const label = document.createElement('div'); label.className = 'state'; label.textContent = '等待上传…';
         const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'remove'; remove.textContent = '删除';
-        const item = {file, row, status: label, remove, state: 'queued'};
+        const detail = document.createElement('p'); detail.className = 'upload-error'; detail.hidden = true;
+        detail.setAttribute('role', 'alert');
+        const item = {file, row, status: label, detail, remove, state: 'queued'};
         remove.addEventListener('click', () => {
             if (running) return;
             queue.splice(queue.indexOf(item), 1); row.remove(); updateButton();
         });
-        msg.append(label, remove); row.append(info, msg); list.appendChild(row); queue.push(item); return true;
+        msg.append(label, remove); row.append(info, msg, detail); list.appendChild(row); queue.push(item); return true;
     }
     picker.addEventListener('click', () => input.click());
     input.addEventListener('change', () => {
@@ -119,18 +139,22 @@
             for (const item of batch) {
                 if (controller.signal.aborted) break;
                 item.state = 'uploading';
+                item.detail.hidden = true; item.detail.textContent = ''; item.status.title = '';
                 try {
                     await upload(item.file, root.dataset.uploadUrl, {
                         signal: controller.signal,
                         onProgress: fraction => {
-                            if (!disposed) status(item, fraction >= 1 ? '正在完成…' : '上传中（' + Math.floor(fraction * 100) + '%）', 'var(--primary-color)');
+                            if (!disposed) status(item, fraction >= 1 ? '正在保存 / 合并…' : '上传中（' + Math.floor(fraction * 100) + '%）', 'var(--primary-color)');
                         }
                     });
                     item.state = 'done';
                     if (!disposed) status(item, '已上传', 'var(--secondary-color)');
                 } catch (error) {
                     item.state = 'failed';
-                    if (!disposed) { status(item, '上传出错', 'var(--danger-color)'); item.status.title = error.message; }
+                    if (!disposed) {
+                        status(item, '上传失败', 'var(--danger-color)'); item.status.title = error.message;
+                        item.detail.textContent = error.message; item.detail.hidden = false;
+                    }
                 }
             }
         } finally {

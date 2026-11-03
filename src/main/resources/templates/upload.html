@@ -4,7 +4,7 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>文件上传</title>
-    <script defer th:src="@{/upload.js}"></script>
+    <script defer th:src="@{/upload.js(v='20261103-9')}"></script>
 
     <style>
         /* 保持与之前一致的全局色彩与变量 */
@@ -106,6 +106,8 @@
         /* 单个文件项（复用之前列表页的卡片样式） */
         .file-item {
             display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
             align-items: center;
             justify-content: space-between;
             padding: 12px 16px;
@@ -129,6 +131,7 @@
             color: var(--text-main);
             font-weight: 500;
             flex-grow: 1;
+            flex-basis: 120px;
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
@@ -192,6 +195,7 @@
         #ctlBtn:disabled { background-color: #9ca3af; }
         #upload-message { color: var(--text-muted); font-size: 0.875rem; }
         #upload-message:empty { display: none; }
+        .upload-error { width: 100%; margin: 0; color: var(--danger-color); font-size: 0.875rem; overflow-wrap: anywhere; }
         @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
     </style>
 </head>

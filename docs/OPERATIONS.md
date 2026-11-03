@@ -140,6 +140,7 @@ node --test --test-isolation=none src/test/js/file-browser.test.cjs src/test/js/
 | 测试 | 主要覆盖 |
 | --- | --- |
 | `FileBrowsingTest` | 根目录、嵌套目录、面包屑、文件显示名和相对链接 |
+| `UploadCompletionTest` | 整文件保存回执、合并完成前等待、缺片与写盘失败、失败后重试 |
 | `PreviewRoutingTest` | 统一视频入口、原始媒体与 Range、旧链接、越界路径 |
 | `SubtitleServiceTest` | 时间轴、编码、文本转义、双轨、缓存失效、字幕接口与路径校验 |
 | `DiscoveryReporterTest` | 上报配置、负数关闭、多网卡地址增减与去重、心跳时机、失败重试和实际 HTTP 协议 |
@@ -173,7 +174,8 @@ node --test --test-isolation=none src/test/js/file-browser.test.cjs src/test/js/
 | 公网入口显示在线但链接打不开 | 状态只表示最近收到上报；选择手机当前网络能访问的地址，入口服务不提供内网穿透 |
 | 列表为空或显示 404 页面 | 根目录是否存在、目录权限、URL 相对路径、是否启动了预期 JAR |
 | 上传请求被拒绝 | multipart 限制、代理限制、分片大小和表单字段 |
-| 页面提示完成但文件不完整 | 后台合并是否完成、`check ok` / `check fail` 日志、磁盘空间、同名任务冲突 |
+| 上传显示保存/合并失败 | 服务器 `Unable to save upload` / `Unable to complete upload` 日志、磁盘空间、写入权限、缺片或任务超时 |
+| 上传显示未确认保存完成 | 网络或代理超时、是否部署匹配的新页面和 JAR；先核对服务器目标文件，再决定重试 |
 | 上传中断后重试失败 | 临时分片和旧任务状态；当前没有可靠的上传会话隔离或断点恢复 |
 | 剪贴板页面无内容 | 服务器是否有桌面会话、剪贴板内容类型、AWT 环境和服务器异常日志 |
 | 提交文本后服务器剪贴板没变化 | 当前实现只记日志，这是尚未实现的写入功能 |
