@@ -93,7 +93,7 @@ test('inline and fullscreen controls share the current episode and disable both 
 test('selecting special filenames encodes each path segment once and updates the reload/share address', async () => {
     const file = '/目录/EP2 & %#.mp4';
     const f = fixture({files: ['/目录/EP1.mkv', file]});
-    f.buttons('list')[1].click();
+    f.buttons('list')[0].click();
     assert.equal(f.overlay.hidden, false);
     f.rows[1].click(); await flush();
     assert.equal(f.overlay.hidden, true);
@@ -162,21 +162,25 @@ test('dispose removes overlays, event handlers and timers, even during a pending
     assert.equal(f.timers.size, 0);
 });
 
-test('next and playlist buttons mount in the native footer and survive reconstruction without duplicates', async () => {
+test('episode navigation survives footer reconstruction while selection stays below the player', async () => {
     const f = fixture();
     const next = f.buttons('next')[0], list = f.buttons('list')[0];
     assert.equal(next.getAttribute('aria-label'), '下一集');
     assert.equal(f.bar.left.children[0].children[0], f.buttons('previous')[0]);
     assert.equal(f.bar.left.children[1], f.bar.playItem);
     assert.equal(f.bar.left.children[2].children[0], next);
-    assert.equal(f.bar.right.children[0].children[0], list);
-    assert.equal(f.bar.right.children[1], f.bar.settingsItem);
+    assert.equal(f.buttons('list').length, 1);
+    assert.equal(f.container.querySelector('.player-episode-list'), null);
+    assert.equal(f.bar.right.children.length, 1);
+    assert.equal(f.bar.right.children[0], f.bar.settingsItem);
     assert.equal(f.container.querySelector('.player-episode-toolbar'), null);
     f.observer.callback(); f.observer.callback();
     assert.equal(f.buttons('next').length, 2);
     const bar = f.rebuildFooter(); f.observer.callback();
     assert.equal(bar.left.children[2].children[0], next);
-    assert.equal(bar.right.children[0].children[0], list);
+    assert.equal(bar.right.children.length, 1);
+    assert.equal(bar.right.children[0], bar.settingsItem);
+    assert.equal(f.buttons('list').length, 1);
     assert.equal(f.buttons('next').length, 2);
     next.click(); await flush();
     assert.equal(f.changes.length, 1);

@@ -77,25 +77,17 @@
         addControls(actions, [['previous', '上一集'], ['next', '下一集'], ['list', '选集']]);
         const previousSlot = node('div', 'avplayer-ui-control-item player-episode-control-slot');
         const nextSlot = node('div', 'avplayer-ui-control-item player-episode-control-slot');
-        const listSlot = node('div', 'avplayer-ui-control-item player-episode-control-slot');
         addControls(previousSlot, [['previous', '上一集']], true);
         addControls(nextSlot, [['next', '下一集']], true);
-        addControls(listSlot, [['list', '选集']], true);
         // libmedia 1.3.1 owns and can rebuild its footer. Reuse our controls when
         // that happens, without editing the vendored player or duplicating listeners.
         function mountControls() {
             if (disposed) return;
             const left = container.querySelector('.avplayer-ui-footer-left');
-            const right = container.querySelector('.avplayer-ui-footer-right');
             if (left && (previousSlot.parentElement !== left || nextSlot.parentElement !== left)) {
                 const play = left.querySelector('.avplayer-ui-control-play')?.closest('.avplayer-ui-control-item');
                 if (play) { play.before(previousSlot); play.after(nextSlot); }
                 else { left.prepend(nextSlot); left.prepend(previousSlot); }
-            }
-            if (right && listSlot.parentElement !== right) {
-                const settings = right.querySelector('.avplayer-ui-control-settings, .avplayer-ui-control-fullscreen')?.closest('.avplayer-ui-control-item');
-                if (settings) settings.before(listSlot);
-                else right.append(listSlot);
             }
         }
         const footerObserver = new MutationObserver(mountControls);
@@ -176,7 +168,7 @@
             footerObserver.disconnect();
             listeners.forEach(remove => remove());
             player.off('played', onPlayed);
-            previousSlot.remove(); nextSlot.remove(); listSlot.remove(); overlay.remove(); message.remove(); navigation.replaceChildren();
+            previousSlot.remove(); nextSlot.remove(); overlay.remove(); message.remove(); navigation.replaceChildren();
             container.classList.remove('player-episodes-open');
         };
     };
