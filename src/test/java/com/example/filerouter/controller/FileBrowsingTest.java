@@ -22,7 +22,7 @@ class FileBrowsingTest {
         Files.createDirectory(root.resolve("folder"));
         Files.write(root.resolve("film.mp4"), new byte[]{1});
         ExtendedModelMap model = new ExtendedModelMap();
-        assertEquals("files", service.getFile(new MockHttpServletResponse(), "", model, false));
+        assertEquals("files", service.getFile(new MockHttpServletResponse(), "", model));
         assertEquals("首页", model.get("directoryName"));
         assertEquals("/", model.get("currentPath"));
         assertNull(model.get("parentPath"));
@@ -36,7 +36,7 @@ class FileBrowsingTest {
         Path directory = Files.createDirectories(root.resolve(path.substring(1)));
         Files.write(directory.resolve("EP01 & % #.mp4"), new byte[]{1});
         ExtendedModelMap model = new ExtendedModelMap();
-        assertEquals("files", service.getFile(new MockHttpServletResponse(), path + "/", model, false));
+        assertEquals("files", service.getFile(new MockHttpServletResponse(), path + "/", model));
         assertEquals("中文 & + %20 # [test]", model.get("directoryName"));
         assertEquals(path, model.get("currentPath"));
         assertEquals("/番剧/huiye", model.get("parentPath"));
@@ -51,7 +51,7 @@ class FileBrowsingTest {
     @Test void emptyFirstLevelDirectoryStillOffersRootAsParent() throws Exception {
         Files.createDirectory(root.resolve("empty"));
         ExtendedModelMap model = new ExtendedModelMap();
-        assertEquals("files", service.getFile(new MockHttpServletResponse(), "/empty", model, false));
+        assertEquals("files", service.getFile(new MockHttpServletResponse(), "/empty", model));
         assertEquals("", model.get("parentPath"));
         assertEquals(0, ((String[]) model.get("files")).length);
         assertEquals("empty", model.get("directoryName"));

@@ -43,7 +43,7 @@ public class FileController {
     @GetMapping("/f/**")
     public String filePage(HttpServletResponse response, HttpServletRequest request, Model model) {
         String requestPath = request.getServletPath().replaceFirst("/f", "");
-        return downService.getFile(response, requestPath, model, false);
+        return downService.getFile(response, requestPath, model);
     }
 
     @GetMapping("/v1/**")

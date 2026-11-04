@@ -35,7 +35,7 @@ public class DownService extends RootService {
     @Autowired
     private NSRRH nsrrh;
 
-    public String getFile(HttpServletResponse response, String requestPath, Model model, boolean delete) {
+    public String getFile(HttpServletResponse response, String requestPath, Model model) {
 
         try {
             String path = FileUtil.basePath + requestPath;
@@ -80,9 +80,6 @@ public class DownService extends RootService {
                 return "files";
             } else {
                 FileUtil.flushFile(response, f);
-                if (delete) {
-                    f.delete();
-                }
                 return null;
             }
         } catch (ClientAbortException e) {
