@@ -88,6 +88,7 @@
     }
     global.FileRouterVideoPlayer = {
         async load(container, {url, assets, status, subtitlesApi, filePath}) {
+            container.classList.toggle('player-awaiting-frame', true);
             status.textContent = '正在加载视频…';
             global.CHEAP_DISABLE_THREAD = true;
             await script(assets + 'cheap-polyfill.js');
@@ -119,18 +120,24 @@
             });
             player.on('error', () => { status.textContent = '视频播放失败，请刷新重试。'; });
             player.on('played', () => { status.textContent = ''; });
+            const hideArtwork = () => container.classList.remove('player-awaiting-frame');
+            // MSE does not emit the WASM render thread's firstVideoRendered event.
+            const artworkEvents = ['firstVideoRendered', 'played'];
+            artworkEvents.forEach(name => player.on(name, hideArtwork));
             const subtitles = subtitleControls(container, player);
             const attachTouch = () => global.FileRouterTouchControls ? global.FileRouterTouchControls(container, player) : () => {};
             let disposeTouch = attachTouch(), reloading = false, disposed = false;
             const destroy = player.destroy.bind(player);
             player.destroy = async () => {
                 disposed = true;
+                artworkEvents.forEach(name => player.off(name, hideArtwork));
                 subtitles.dispose(); disposeTouch();
                 return destroy();
             };
             global.addEventListener('pagehide', () => player.destroy(), { once: true });
             const subtitleStreams = () => player.getStreams().filter(stream => stream.mediaType === 'Subtitle');
             async function loadMedia() {
+                container.classList.toggle('player-awaiting-frame', true);
                 await player.load(url, {externalSubtitles: []});
                 if (disposed) return '';
                 let subtitleWarning = '';

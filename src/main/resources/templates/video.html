@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>视频播放</title>
     <script th:src="@{/mobile-player-controls.js(v='20261103-8')}"></script>
-    <script th:src="@{/video-player.js(v='20261103-8')}"></script>
+    <script th:src="@{/video-player.js(v='20261104-4')}"></script>
     <script th:src="@{/video-playlist.js(v='20261104-1')}"></script>
-    <link rel="stylesheet" th:href="@{/mobile-player.css(v='20261104-2')}">
+    <link rel="stylesheet" th:href="@{/mobile-player.css(v='20261104-4')}">
 </head>
 <body>
-<div id="video-player" aria-label="视频播放器"></div>
+<div id="video-player" class="player-awaiting-frame" aria-label="视频播放器"></div>
 <div id="playback-status" role="status" aria-live="polite">正在加载播放器…</div>
 <section id="episode-navigation" aria-label="视频选集"></section>
 <script th:inline="javascript">

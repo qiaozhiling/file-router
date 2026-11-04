@@ -2,6 +2,10 @@
 body { margin: 16px; font-family: system-ui, sans-serif; background: #f5f6f8; }
 #video-player, #playback-status { width: 90%; max-width: 1280px; margin: 12px auto; }
 #video-player { position: relative; height: min(70vh, 720px); min-height: 200px; background: #000; overflow: hidden; }
+/* Native MSE and WASM rendering use different first-frame notifications. */
+#video-player.player-awaiting-frame { background: #000 url('picture/leim.jpg') center / contain no-repeat; }
+#video-player.player-awaiting-frame .avplayer-ui-container { background-color: rgba(0, 0, 0, 0.18); }
+#video-player.player-awaiting-frame .avplayer-ui-player canvas, #video-player.player-awaiting-frame .avplayer-ui-player video { opacity: 0; }
 #playback-status { min-height: 24px; color: #555; }
 #video-player:fullscreen { width: 100%; height: 100%; max-width: none; margin: 0; }
 .player-speed-hint { position: absolute; z-index: 20; top: max(16px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); padding: 8px 16px; border-radius: 24px; color: white; background: #000b; font-size: 14px; pointer-events: none; display: none; }

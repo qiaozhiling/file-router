@@ -133,6 +133,33 @@ test('fullscreen includes the outer player container that hosts touch feedback o
     assert.equal(f.config().fullscreenDom, f.container);
 });
 
+test('MSE playback hides artwork without requiring the WASM first-frame event', async () => {
+    let release;
+    const f = fixture({mse: true, beforeLoad: url => url.includes('EP2') ? new Promise(resolve => { release = resolve; }) : undefined});
+    const player = await f.load('/EP1.mkv');
+    assert.equal(f.container.classList.contains('player-awaiting-frame'), true);
+    await player.play();
+    assert.equal(f.container.classList.contains('player-awaiting-frame'), false);
+    player.pause(); await player.seek(15000n);
+    assert.equal(f.container.classList.contains('player-awaiting-frame'), false);
+    const switching = player.changeSource({url: '/app/media/EP2.mkv', filePath: '/EP2.mkv'});
+    await flush();
+    assert.equal(f.container.classList.contains('player-awaiting-frame'), true);
+    release(); await switching;
+    assert.equal(f.container.classList.contains('player-awaiting-frame'), false);
+    await player.destroy();
+    f.container.classList.toggle('player-awaiting-frame', true);
+    f.emit('firstVideoRendered'); f.emit('played');
+    assert.equal(f.container.classList.contains('player-awaiting-frame'), true);
+});
+
+test('WASM rendering can hide artwork on its first frame before the played event', async () => {
+    const f = fixture(); await f.load('/test.mkv');
+    assert.equal(f.container.classList.contains('player-awaiting-frame'), true);
+    f.emit('firstVideoRendered');
+    assert.equal(f.container.classList.contains('player-awaiting-frame'), false);
+});
+
 test('WASM audio/video codecs are local, while text subtitle decoders remain built-in', async () => {
     const f = fixture(); await f.load();
     assert.equal(f.config().getWasm('decoder', 12, 0), '/app/libmedia/decode/mpeg4.wasm');
@@ -315,4 +342,5 @@ test('a failed episode can be retried, and an autoplay block leaves the selected
     const blocked=fixture({playError:true}); const other=await blocked.load();
     await other.changeSource({url:'/EP2.mkv',filePath:'/EP2.mkv'});
     assert.match(blocked.status.textContent,/点击播放/);
+    assert.equal(blocked.container.classList.contains('player-awaiting-frame'),true);
 });
